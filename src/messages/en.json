@@ -164,6 +164,7 @@
     "reorderHint": "Drag blocks to change order on the homepage.",
     "addText": "Add text",
     "addImageBlock": "Add image block",
+    "addVideoBlock": "Add video block",
     "addIconBlock": "Add icon block",
     "selectedElement": "Selected element",
     "selectElement": "Select an element on canvas",
@@ -172,6 +173,40 @@
     "textColor": "Text color",
     "background": "Background",
     "previewHeight": "Preview height"
+    ,"previewBackgroundColor": "Preview background color"
+    ,"transparentBackground": "Transparent background"
+    ,"constructorTools": "Constructor tools"
+    ,"addProductGroupBlock": "Add product group block"
+    ,"addViewedStoryBlock": "Add viewed story block"
+    ,"addSearchedStoryBlock": "Add searched story block"
+    ,"addCommentsBlock": "Add comments block"
+    ,"productGroupHint": "Use product group key from admin products, for example: new-arrivals"
+    ,"commentsHint": "One comment per line: Name|Rating(1-5)|Text"
+    ,"linkUrl": "Link URL"
+    ,"dragOrUploadImage": "Drag image file here or click to upload"
+    ,"noImagePreview": "No image preview yet"
+    ,"horizontalPositionPercent": "Horizontal position (percent)"
+    ,"verticalPositionPercent": "Vertical position (percent)"
+    ,"blockWidthPercent": "Block width (percent)"
+    ,"blockHeightPercent": "Block height (percent)"
+    ,"canvasHeader": "Header"
+    ,"canvasFooter": "Footer"
+    ,"heroMissing": "Hero image is not set yet"
+    ,"imageUrlEmpty": "Image URL is empty"
+    ,"videoUrlEmpty": "Video URL is empty"
+    ,"productGroupFallback": "Product group"
+    ,"productGroupEmpty": "Group is empty. Set group key in product admin."
+    ,"noViewedItems": "No viewed items yet."
+    ,"noSearchHistory": "No search history yet."
+    ,"commentsFallbackName": "Customer"
+    ,"commentsFallbackText": "Great quality and fast delivery."
+    ,"toolsCollapse": "Collapse tools panel"
+    ,"toolsExpand": "Expand tools panel"
+    ,"commentName": "Reviewer name"
+    ,"commentRating": "Rating"
+    ,"commentText": "Review text"
+    ,"addComment": "Add review"
+    ,"removeComment": "Remove review"
   },
   "info": {
     "brand": "GRACIANA Women's Shoes",

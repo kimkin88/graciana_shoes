@@ -164,6 +164,7 @@
     "reorderHint": "Перетаскивайте блоки, чтобы изменить их порядок на главной.",
     "addText": "Добавить текст",
     "addImageBlock": "Добавить блок с изображением",
+    "addVideoBlock": "Добавить блок с видео",
     "addIconBlock": "Добавить блок с иконкой",
     "selectedElement": "Выбранный элемент",
     "selectElement": "Выберите элемент на холсте",
@@ -172,6 +173,40 @@
     "textColor": "Цвет текста",
     "background": "Фон",
     "previewHeight": "Высота превью"
+    ,"previewBackgroundColor": "Цвет фона превью"
+    ,"transparentBackground": "Прозрачный фон"
+    ,"constructorTools": "Инструменты конструктора"
+    ,"addProductGroupBlock": "Добавить блок группы товаров"
+    ,"addViewedStoryBlock": "Добавить блок просмотренных"
+    ,"addSearchedStoryBlock": "Добавить блок поисковых запросов"
+    ,"addCommentsBlock": "Добавить блок отзывов"
+    ,"productGroupHint": "Используйте ключ группы из админки товаров, например: new-arrivals"
+    ,"commentsHint": "Один отзыв в строке: Имя|Рейтинг(1-5)|Текст"
+    ,"linkUrl": "Ссылка URL"
+    ,"dragOrUploadImage": "Перетащите файл изображения сюда или нажмите для загрузки"
+    ,"noImagePreview": "Предпросмотра изображения пока нет"
+    ,"horizontalPositionPercent": "Горизонтальная позиция (проценты)"
+    ,"verticalPositionPercent": "Вертикальная позиция (проценты)"
+    ,"blockWidthPercent": "Ширина блока (проценты)"
+    ,"blockHeightPercent": "Высота блока (проценты)"
+    ,"canvasHeader": "Шапка"
+    ,"canvasFooter": "Футер"
+    ,"heroMissing": "Главное изображение пока не задано"
+    ,"imageUrlEmpty": "Ссылка изображения пустая"
+    ,"videoUrlEmpty": "Ссылка на видео пустая"
+    ,"productGroupFallback": "Группа товаров"
+    ,"productGroupEmpty": "Группа пуста. Укажите ключ группы в админке товаров."
+    ,"noViewedItems": "Пока нет просмотренных товаров."
+    ,"noSearchHistory": "История поиска пока пуста."
+    ,"commentsFallbackName": "Покупатель"
+    ,"commentsFallbackText": "Отличное качество и быстрая доставка."
+    ,"toolsCollapse": "Свернуть панель инструментов"
+    ,"toolsExpand": "Развернуть панель инструментов"
+    ,"commentName": "Имя автора"
+    ,"commentRating": "Рейтинг"
+    ,"commentText": "Текст отзыва"
+    ,"addComment": "Добавить отзыв"
+    ,"removeComment": "Удалить отзыв"
   },
   "info": {
     "brand": "GRACIANA Женская Обувь",

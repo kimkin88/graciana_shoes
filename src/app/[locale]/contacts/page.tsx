@@ -19,8 +19,8 @@ export default async function ContactsPage({
       <p>{dict.info.phones.join(" / ")}</p>
       <p>{dict.info.email}</p>
       <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>{dict.info.address}</p>
-      <p style={{ color: "#64748b" }}>{dict.info.workHours}</p>
-      <p style={{ color: "#64748b", whiteSpace: "pre-wrap" }}>{dict.info.legal}</p>
+      <p>{dict.info.workHours}</p>
+      <p style={{ whiteSpace: "pre-wrap" }}>{dict.info.legal}</p>
     </section>
   );
 }

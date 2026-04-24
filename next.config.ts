@@ -8,8 +8,10 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       // Allow admin media uploads larger than default 1 MB.
-      bodySizeLimit: "8mb",
+      bodySizeLimit: "30mb",
     },
+    // Allow larger request bodies through proxy layer.
+    proxyClientMaxBodySize: "30mb",
   },
 };
 

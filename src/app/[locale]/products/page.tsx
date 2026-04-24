@@ -65,7 +65,7 @@ export default async function ProductsPage({
       />
 
       {!products.length ? (
-        <p style={{ color: "#64748b" }}>{dict.products.noResults}</p>
+        <p>{dict.products.noResults}</p>
       ) : (
         <ProductGridMotion products={products} locale={locale} />
       )}

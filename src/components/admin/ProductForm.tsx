@@ -273,7 +273,7 @@ export function ProductForm({ mode, locale, dict, product }: Props) {
         </div>
       ) : null}
       {mediaHint ? (
-        <p style={{ display: "flex", alignItems: "center", gap: 6, marginTop: -8, marginBottom: 16, color: "#64748b" }}>
+        <p style={{ display: "flex", alignItems: "center", gap: 6, marginTop: -8, marginBottom: 16, color: "inherit" }}>
           <ImageIcon />
           {mediaHint}
         </p>

@@ -165,15 +165,14 @@ const NavLink = styled(Link)<{ $active?: boolean }>`
   font-size: 0.76rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: ${({ theme, $active }) =>
-    $active ? theme.colors.primary : theme.colors.textMuted};
+  color: ${({ theme }) => theme.colors.text};
   font-weight: ${({ $active }) => ($active ? 700 : 500)};
   white-space: nowrap;
   padding: 8px 10px;
   border-radius: ${({ theme }) => theme.radii.pill};
   transition: background 0.2s ease, color 0.2s ease;
   &:hover {
-    color: ${({ theme }) => theme.colors.text};
+    color: ${({ theme }) => theme.colors.primary};
     background: ${({ theme }) => theme.colors.accent};
   }
 `;
@@ -367,7 +366,7 @@ export function HeaderBar({ locale, dict, userEmail, isAdmin }: Props) {
         <div style={{ padding: "10px 16px 24px", overflowY: "auto" }}>
           <div style={{ paddingBottom: 10, marginBottom: 6, borderBottom: "1px solid #d9cec3" }}>
             <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: "0.76rem", letterSpacing: "0.07em", textTransform: "uppercase", color: "#7a6f66" }}>
+              <span style={{ fontSize: "0.76rem", letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--page-text, inherit)" }}>
                 {dict.common.language}
               </span>
               <LangSelect
@@ -450,18 +449,18 @@ export function HeaderBar({ locale, dict, userEmail, isAdmin }: Props) {
               marginTop: 16,
               padding: "12px 0 0",
               borderTop: "1px solid #d9cec3",
-              color: "#7a6f66",
+              color: "var(--page-text, inherit)",
               display: "grid",
               gap: 8,
               fontSize: "0.82rem",
               lineHeight: 1.45,
             }}
           >
-            <strong style={{ color: "#4c433e", letterSpacing: "0.04em" }}>{dict.info.customerTitle}</strong>
+            <strong style={{ color: "var(--page-heading, inherit)", letterSpacing: "0.04em" }}>{dict.info.customerTitle}</strong>
             <div>{dict.info.phones.join(" / ")}</div>
             <div>{dict.info.email}</div>
             <div>{dict.info.workHours}</div>
-            <strong style={{ marginTop: 4, color: "#4c433e", letterSpacing: "0.04em" }}>{dict.common.socialLinks}</strong>
+            <strong style={{ marginTop: 4, color: "var(--page-heading, inherit)", letterSpacing: "0.04em" }}>{dict.common.socialLinks}</strong>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <SocialLink
                 href="https://www.instagram.com/graciana_shoes_by/"
@@ -498,7 +497,7 @@ export function HeaderBar({ locale, dict, userEmail, isAdmin }: Props) {
                 <MobileIcon width={18} height={18} />
               </SocialLink>
             </div>
-            <strong style={{ marginTop: 4, color: "#4c433e", letterSpacing: "0.04em" }}>{dict.info.legalTitle}</strong>
+            <strong style={{ marginTop: 4, color: "var(--page-heading, inherit)", letterSpacing: "0.04em" }}>{dict.info.legalTitle}</strong>
             <div style={{ whiteSpace: "pre-wrap" }}>{dict.info.legal}</div>
           </div>
         </div>

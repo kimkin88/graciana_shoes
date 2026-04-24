@@ -58,7 +58,7 @@ export default async function AdminHomePage({
       >
       <Card>
         <CardBody>
-          <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
+          <div style={{ fontSize: "0.85rem", color: "inherit" }}>
             {dict.admin.revenue30d}
           </div>
           <div style={{ fontSize: "1.35rem", fontWeight: 700, marginTop: 8 }}>
@@ -68,7 +68,7 @@ export default async function AdminHomePage({
       </Card>
       <Card>
         <CardBody>
-          <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
+          <div style={{ fontSize: "0.85rem", color: "inherit" }}>
             {dict.admin.orders30d}
           </div>
           <div style={{ fontSize: "1.35rem", fontWeight: 700, marginTop: 8 }}>
@@ -78,7 +78,7 @@ export default async function AdminHomePage({
       </Card>
       <Card>
         <CardBody>
-          <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
+          <div style={{ fontSize: "0.85rem", color: "inherit" }}>
             {dict.admin.productCount}
           </div>
           <div style={{ fontSize: "1.35rem", fontWeight: 700, marginTop: 8 }}>

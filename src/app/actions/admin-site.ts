@@ -45,7 +45,15 @@ type IntroLayout = {
 };
 type HomeBuilderElement = {
   id: string;
-  type: "text" | "image" | "icon";
+  type:
+    | "text"
+    | "image"
+    | "video"
+    | "icon"
+    | "product-group"
+    | "story-viewed"
+    | "story-searched"
+    | "comments";
   x: number;
   y: number;
   width: number;
@@ -53,6 +61,7 @@ type HomeBuilderElement = {
   content?: string;
   href?: string;
   imageUrl?: string;
+  videoUrl?: string;
   icon?: string;
   color?: string;
   background?: string;
@@ -64,6 +73,18 @@ function clamp(input: unknown, min: number, max: number, fallback: number) {
   const value = Number(input);
   if (Number.isNaN(value)) return fallback;
   return Math.max(min, Math.min(max, value));
+}
+
+function extensionFromMime(mime: string) {
+  if (mime.includes("jpeg")) return "jpg";
+  if (mime.includes("png")) return "png";
+  if (mime.includes("webp")) return "webp";
+  if (mime.includes("gif")) return "gif";
+  if (mime.includes("mp4")) return "mp4";
+  if (mime.includes("webm")) return "webm";
+  if (mime.includes("ogg")) return "ogg";
+  if (mime.includes("quicktime")) return "mov";
+  return "jpg";
 }
 
 export async function updateHomeHeroImage(formData: FormData) {
@@ -150,41 +171,109 @@ export async function updateMainPageConstructor(formData: FormData) {
   } catch {
     introLayout = {};
   }
-  let homeBuilder: { canvasHeight: number; elements: HomeBuilderElement[] } = {
+  let homeBuilder: {
+    canvasHeight: number;
+    canvasBackground: string;
+    elements: HomeBuilderElement[];
+  } = {
     canvasHeight: 1200,
+    canvasBackground: "#f7f2ec",
     elements: [],
   };
   try {
     const raw = String(formData.get("home_builder_json") ?? "{}");
     const parsed = JSON.parse(raw) as {
       canvasHeight?: number;
+      canvasBackground?: string;
       elements?: HomeBuilderElement[];
     };
+    const normalizedElements = Array.isArray(parsed.elements)
+      ? parsed.elements
+          .map((item) => ({
+            id: String(item.id ?? `el-${Date.now()}`),
+            type:
+              item.type === "image" ||
+              item.type === "video" ||
+              item.type === "icon" ||
+              item.type === "product-group" ||
+              item.type === "story-viewed" ||
+              item.type === "story-searched" ||
+              item.type === "comments"
+                ? item.type
+                : "text",
+            x: clamp(item.x, 0, 100, 0),
+            y: clamp(item.y, 0, 100, 0),
+            width: clamp(item.width, 4, 100, 20),
+            height: clamp(item.height, 4, 100, 12),
+            content: String(item.content ?? "").trim() || undefined,
+            href: String(item.href ?? "").trim() || undefined,
+            imageUrl: String(item.imageUrl ?? "").trim() || undefined,
+            videoUrl: String(item.videoUrl ?? "").trim() || undefined,
+            icon: String(item.icon ?? "").trim() || undefined,
+            color: String(item.color ?? "").trim() || undefined,
+            background: String(item.background ?? "").trim() || undefined,
+            fontSize: clamp(item.fontSize, 10, 72, 18),
+            fontWeight: clamp(item.fontWeight, 300, 900, 600),
+          }))
+          .filter((item) => Boolean(item.id))
+      : [];
+
+    const uploadedElements: HomeBuilderElement[] = [];
+    for (const item of normalizedElements) {
+      if (item.type === "image" && item.imageUrl?.startsWith("data:")) {
+        try {
+          const mime = item.imageUrl.slice(5, item.imageUrl.indexOf(";")).toLowerCase();
+          const extension = extensionFromMime(mime);
+          const response = await fetch(item.imageUrl);
+          const bytes = await response.arrayBuffer();
+          const filePath = `site/home-builder/${Date.now()}-${item.id}.${extension}`;
+          const { error: uploadError } = await service.storage
+            .from("product-images")
+            .upload(filePath, bytes, { contentType: mime || "image/jpeg", upsert: false });
+          if (!uploadError) {
+            const { data } = service.storage.from("product-images").getPublicUrl(filePath);
+            uploadedElements.push({ ...item, imageUrl: data.publicUrl });
+            continue;
+          }
+          console.error("[admin-site:home-builder-image-upload]", uploadError);
+        } catch (error) {
+          console.error("[admin-site:home-builder-image-convert]", error);
+        }
+      }
+      if (item.type === "video" && item.videoUrl?.startsWith("data:")) {
+        try {
+          const mime = item.videoUrl.slice(5, item.videoUrl.indexOf(";")).toLowerCase();
+          const extension = extensionFromMime(mime);
+          const response = await fetch(item.videoUrl);
+          const bytes = await response.arrayBuffer();
+          const filePath = `site/home-builder/${Date.now()}-${item.id}.${extension}`;
+          const { error: uploadError } = await service.storage
+            .from("product-images")
+            .upload(filePath, bytes, { contentType: mime || "video/mp4", upsert: false });
+          if (!uploadError) {
+            const { data } = service.storage.from("product-images").getPublicUrl(filePath);
+            uploadedElements.push({ ...item, videoUrl: data.publicUrl });
+            continue;
+          }
+          console.error("[admin-site:home-builder-video-upload]", uploadError);
+        } catch (error) {
+          console.error("[admin-site:home-builder-video-convert]", error);
+        }
+      }
+      uploadedElements.push(item);
+    }
+
     homeBuilder = {
       canvasHeight: clamp(parsed.canvasHeight, 800, 5000, 1200),
-      elements: Array.isArray(parsed.elements)
-        ? parsed.elements
-            .map((item) => ({
-              id: String(item.id ?? `el-${Date.now()}`),
-              type: item.type === "image" || item.type === "icon" ? item.type : "text",
-              x: clamp(item.x, 0, 100, 0),
-              y: clamp(item.y, 0, 100, 0),
-              width: clamp(item.width, 4, 100, 20),
-              height: clamp(item.height, 4, 100, 12),
-              content: String(item.content ?? "").trim() || undefined,
-              href: String(item.href ?? "").trim() || undefined,
-              imageUrl: String(item.imageUrl ?? "").trim() || undefined,
-              icon: String(item.icon ?? "").trim() || undefined,
-              color: String(item.color ?? "").trim() || undefined,
-              background: String(item.background ?? "").trim() || undefined,
-              fontSize: clamp(item.fontSize, 10, 72, 18),
-              fontWeight: clamp(item.fontWeight, 300, 900, 600),
-            }))
-            .filter((item) => Boolean(item.id))
-        : [],
+      canvasBackground: String(parsed.canvasBackground ?? "#f7f2ec").trim() || "#f7f2ec",
+      elements: uploadedElements,
     };
   } catch {
-    homeBuilder = { canvasHeight: 1200, elements: [] };
+    homeBuilder = {
+      canvasHeight: 1200,
+      canvasBackground: "#f7f2ec",
+      elements: [],
+    };
   }
 
   let homeSections: MainPageSection[] = [];

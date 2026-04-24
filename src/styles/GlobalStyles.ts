@@ -19,6 +19,21 @@ export const GlobalStyles = createGlobalStyle`
     --muted-price: ${({ theme }) => theme.colors.textMuted};
     --promo-bg: ${({ theme }) => theme.colors.text};
     --promo-text: ${({ theme }) => theme.colors.background};
+    --builder-surface: ${({ theme }) => theme.colors.surface};
+    --builder-accent: ${({ theme }) => theme.colors.accent};
+    --builder-border: ${({ theme }) => theme.colors.border};
+    --builder-text: ${({ theme }) => theme.colors.text};
+    --builder-text-muted: ${({ theme }) => theme.colors.textMuted};
+    --builder-focus: ${({ theme }) => theme.colors.primary};
+    --page-heading: ${({ theme }) => theme.colors.text};
+    --page-text: ${({ theme }) => theme.colors.text};
+    --page-text-muted: ${({ theme }) => theme.colors.textMuted};
+    --footer-bg: ${({ theme }) => theme.colors.surface};
+    --footer-border: ${({ theme }) => theme.colors.border};
+    --footer-text: ${({ theme }) => theme.colors.text};
+    --footer-muted: ${({ theme }) => theme.colors.textMuted};
+    --footer-heading: ${({ theme }) => theme.colors.primary};
+    --link-hover: ${({ theme }) => theme.colors.primary};
     letter-spacing: 0.01em;
   }
 
@@ -29,6 +44,11 @@ export const GlobalStyles = createGlobalStyle`
   a {
     color: inherit;
     text-decoration: none;
+    transition: color 0.18s ease;
+  }
+
+  a:hover {
+    color: var(--link-hover);
   }
 
   h1,
@@ -40,6 +60,17 @@ export const GlobalStyles = createGlobalStyle`
     font-family: ${({ theme }) => theme.font.display};
     letter-spacing: 0.015em;
     line-height: 1.12;
+    color: var(--page-heading);
+  }
+
+  p,
+  li {
+    color: var(--page-text);
+    line-height: 1.55;
+  }
+
+  small {
+    color: var(--page-text-muted);
   }
 
   ::selection {

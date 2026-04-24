@@ -7,7 +7,7 @@ export default function Loading() {
 
   if (reduceMotion) {
     return (
-      <p style={{ color: "#64748b", padding: "24px 0" }}>
+      <p style={{ color: "inherit", padding: "24px 0" }}>
         …
       </p>
     );
@@ -15,7 +15,7 @@ export default function Loading() {
 
   return (
     <motion.p
-      style={{ color: "#64748b", padding: "24px 0" }}
+      style={{ color: "inherit", padding: "24px 0" }}
       animate={{ opacity: [0.35, 1, 0.35] }}
       transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
     >

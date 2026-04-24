@@ -27,7 +27,16 @@ export default async function AdminLayout({
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <div>
-        <h1 style={{ margin: 0 }}>{dict.admin.title}</h1>
+        <h1
+          style={{
+            margin: 0,
+            color: "var(--page-heading, inherit)",
+            fontSize: "clamp(1.5rem, 2.4vw, 2rem)",
+            letterSpacing: "0.02em",
+          }}
+        >
+          {dict.admin.title}
+        </h1>
         <AdminTabs
           locale={locale}
           labels={{

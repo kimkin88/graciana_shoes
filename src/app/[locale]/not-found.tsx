@@ -12,7 +12,7 @@ export default function LocaleNotFound() {
   return (
     <div style={{ padding: "48px 0", textAlign: "center" }}>
       <h1 style={{ fontSize: "1.5rem" }}>404</h1>
-      <p style={{ color: "#64748b" }}>
+      <p>
         {locale === "ru" ? "Страница не найдена." : "Page not found."}
       </p>
       <Link href={`/${locale}`}>

@@ -7,6 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchProducts } from "@/lib/products/queries";
 import { ProductGridMotion } from "@/components/motion/ProductGridMotion";
 import { RecentlyViewedStory } from "@/components/product/RecentlyViewedStory";
+import {
+  HomeBuilderCanvas,
+  type HomeBuilderElement,
+} from "@/components/home/HomeBuilderCanvas";
+import { HOME_BUILDER_CONTENT_WIDTH } from "@/components/home/home-builder-constants";
 
 export const revalidate = 60;
 
@@ -141,7 +146,7 @@ export default async function HomePage({
             <Link href={localizedPath("/products", locale)}>{dict.home.viewAll}</Link>
           </div>
           {!featured.length ? (
-            <p style={{ color: "#64748b" }}>{dict.home.empty}</p>
+            <p>{dict.home.empty}</p>
           ) : (
             <ProductGridMotion products={featured} locale={locale} />
           )}
@@ -152,102 +157,73 @@ export default async function HomePage({
         (() => {
           const builder = siteSettings?.home_builder as {
             canvasHeight?: number;
-            elements?: Array<{
-              id?: string;
-              type?: "text" | "image" | "icon";
-              x?: number;
-              y?: number;
-              width?: number;
-              height?: number;
-              content?: string;
-              href?: string;
-              imageUrl?: string;
-              icon?: string;
-              color?: string;
-              background?: string;
-              fontSize?: number;
-              fontWeight?: number;
-            }>;
+            canvasBackground?: string;
+            elements?: Partial<HomeBuilderElement>[];
           };
           const canvasHeight = Math.min(5000, Math.max(800, Number(builder.canvasHeight ?? 1200)));
+          const canvasBackground = String(builder.canvasBackground ?? "#f7f2ec");
+          const elements: HomeBuilderElement[] = (builder.elements ?? []).map((item, index) => ({
+            id: String(item.id ?? `el-${index}`),
+            type:
+              item.type === "image" ||
+              item.type === "video" ||
+              item.type === "icon" ||
+              item.type === "product-group" ||
+              item.type === "story-viewed" ||
+              item.type === "story-searched" ||
+              item.type === "comments"
+                ? item.type
+                : "text",
+            x: Math.min(100, Math.max(0, Number(item.x ?? 0))),
+            y: Math.min(100, Math.max(0, Number(item.y ?? 0))),
+            width: Math.min(100, Math.max(4, Number(item.width ?? 20))),
+            height: Math.min(100, Math.max(4, Number(item.height ?? 12))),
+            content: String(item.content ?? ""),
+            href: String(item.href ?? ""),
+            imageUrl: String(item.imageUrl ?? ""),
+            videoUrl: String(item.videoUrl ?? ""),
+            icon: String(item.icon ?? "star"),
+            color: String(item.color ?? "#fff"),
+            background: String(item.background ?? "rgba(0,0,0,0.2)"),
+            fontSize: Number(item.fontSize ?? 18),
+            fontWeight: Number(item.fontWeight ?? 600),
+          }));
           return (
-            <section
-              style={{
-                position: "relative",
-                height: canvasHeight,
-                width: "100%",
-                overflow: "hidden",
-                borderRadius: 12,
-                border: "1px solid #dacfc4",
-                background: "#f7f2ec",
-              }}
-            >
-              {siteSettings?.hero_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={siteSettings.hero_image_url}
-                  alt={dict.home.heroAlt}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: 340,
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                />
-              ) : null}
-              {builder.elements?.map((item, index) => {
-                const x = Math.min(100, Math.max(0, Number(item.x ?? 0)));
-                const y = Math.min(100, Math.max(0, Number(item.y ?? 0)));
-                const width = Math.min(100, Math.max(4, Number(item.width ?? 20)));
-                const height = Math.min(100, Math.max(4, Number(item.height ?? 12)));
-                const style = {
-                  position: "absolute",
-                  left: `${x}%`,
-                  top: `${y}%`,
-                  width: `${width}%`,
-                  minHeight: `${height}%`,
-                  padding: 10,
-                  borderRadius: 10,
-                  background: item.background || "rgba(0,0,0,0.2)",
-                  color: item.color || "#fff",
-                  overflow: "hidden",
-                };
-                const body =
-                  item.type === "image" ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : item.type === "icon" ? (
-                    <div style={{ fontSize: Number(item.fontSize ?? 18), fontWeight: Number(item.fontWeight ?? 600) }}>
-                      {item.icon === "truck"
-                        ? "🚚"
-                        : item.icon === "gift"
-                          ? "🎁"
-                          : item.icon === "credit-card"
-                            ? "💳"
-                            : item.icon === "phone"
-                              ? "📞"
-                              : "⭐"}{" "}
-                      {item.content}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: Number(item.fontSize ?? 18), fontWeight: Number(item.fontWeight ?? 600) }}>
-                      {item.content}
-                    </div>
-                  );
-                return item.href ? (
-                  <Link key={item.id ?? `el-${index}`} href={item.href} style={style}>
-                    {body}
-                  </Link>
-                ) : (
-                  <div key={item.id ?? `el-${index}`} style={style}>
-                    {body}
-                  </div>
-                );
-              })}
-            </section>
+            <div style={{ width: "100%", maxWidth: HOME_BUILDER_CONTENT_WIDTH }}>
+              <HomeBuilderCanvas
+                heroImageUrl={siteSettings?.hero_image_url ?? ""}
+                canvasHeight={canvasHeight}
+                canvasBackground={canvasBackground}
+                elements={elements}
+                text={{
+                  header: dict.admin.canvasHeader,
+                  footer: dict.admin.canvasFooter,
+                  heroMissing: dict.admin.heroMissing,
+                  imageUrlEmpty: dict.admin.imageUrlEmpty,
+                  videoUrlEmpty:
+                    (dict.admin as Record<string, string>).videoUrlEmpty ??
+                    "Video URL is empty",
+                  productGroupFallback: dict.admin.productGroupFallback,
+                  productGroupEmpty: dict.admin.productGroupEmpty,
+                  noViewedItems: dict.admin.noViewedItems,
+                  noSearchHistory: dict.admin.noSearchHistory,
+                  commentsFallbackName: dict.admin.commentsFallbackName,
+                  commentsFallbackText: dict.admin.commentsFallbackText,
+                }}
+                locale={locale}
+                productGroups={Object.fromEntries(
+                  [...groupedProducts.entries()].map(([groupKey, rows]) => [
+                    groupKey,
+                    rows.map((row) => ({
+                      id: row.id,
+                      title: locale === "en" ? row.name_en || row.name_ru : row.name_ru,
+                      href: localizedPath(`/products/${row.slug}`, locale),
+                      imageUrl: row.image_url,
+                    })),
+                  ]),
+                )}
+              />
+            </div>
           );
         })()
       ) : homeSections.length ? (
@@ -380,7 +356,7 @@ export default async function HomePage({
                         <p
                           style={{
                             margin: 0,
-                            color: "#64748b",
+                            color: "inherit",
                             fontSize: `${section.subtitleSize}px`,
                             fontWeight: Number(section.subtitleWeight),
                             fontFamily: section.subtitleFont,

@@ -41,7 +41,7 @@ export default async function OrdersPage({
     <div>
       <h1 style={{ marginTop: 0 }}>{dict.orders.title}</h1>
       {!rows.length ? (
-        <p style={{ color: "#64748b" }}>{dict.orders.empty}</p>
+        <p>{dict.orders.empty}</p>
       ) : (
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" }}>
           <thead>

@@ -105,7 +105,13 @@ export function HomeHeroImageEditor({
           if (e.target.value.trim()) setPreview(e.target.value);
         }}
         placeholder={labels.urlPlaceholder}
-        style={{ padding: "10px 12px", border: "1px solid #cbbeb0", borderRadius: 10 }}
+        style={{
+          padding: "10px 12px",
+          border: "1px solid var(--builder-border, #cbbeb0)",
+          borderRadius: 10,
+          background: "var(--builder-surface, #fff)",
+          color: "var(--builder-text, inherit)",
+        }}
       />
       <input
         ref={fileInputRef}
@@ -114,7 +120,7 @@ export function HomeHeroImageEditor({
         accept="image/*"
         onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
       />
-      <p style={{ margin: 0, color: "#7a6f66", fontSize: 13 }}>{labels.sizeHint}</p>
+      <p style={{ margin: 0, color: "inherit", fontSize: 13 }}>{labels.sizeHint}</p>
 
       {isCropping && cropImageSrc ? (
         <div style={{ display: "grid", gap: 8 }}>
@@ -160,7 +166,13 @@ export function HomeHeroImageEditor({
             alt=""
             width={768}
             height={288}
-            style={{ width: "100%", maxWidth: 560, height: "auto", borderRadius: 12, border: "1px solid #d8ccc0" }}
+            style={{
+              width: "100%",
+              maxWidth: 560,
+              height: "auto",
+              borderRadius: 12,
+              border: "1px solid var(--builder-border, #d8ccc0)",
+            }}
           />
         </div>
       ) : null}

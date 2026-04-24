@@ -14,14 +14,20 @@ const Wrap = styled.nav`
 `;
 
 const Tab = styled(Link)<{ $active?: boolean }>`
-  border: 1px solid ${({ $active }) => ($active ? "#6c5a4d" : "#b7a79a")};
+  border: 1px solid
+    ${({ theme, $active }) => ($active ? theme.colors.buttonPrimaryBorder : theme.colors.buttonGhostBorder)};
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 0.82rem;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  background: ${({ $active }) => ($active ? "#1f1a17" : "#f4ece3")};
-  color: ${({ $active }) => ($active ? "#fff" : "inherit")};
+  background: ${({ theme, $active }) => ($active ? theme.colors.buttonPrimaryBg : theme.colors.buttonGhostBg)};
+  color: ${({ theme, $active }) => ($active ? theme.colors.buttonPrimaryText : theme.colors.buttonGhostText)};
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  &:hover {
+    transform: translateY(-1px);
+    background: ${({ theme, $active }) => ($active ? theme.colors.buttonPrimaryHoverBg : theme.colors.accent)};
+  }
 `;
 
 type Props = {

@@ -13,9 +13,11 @@ export function SiteFooter({ locale, dict }: Props) {
   return (
     <footer
       style={{
-        borderTop: "1px solid #cbd5e1",
+        borderTop: "1px solid var(--footer-border, #cbd5e1)",
         marginTop: 24,
         fontSize: 14,
+        color: "var(--footer-text, inherit)",
+        background: "var(--footer-bg, transparent)",
       }}
     >
       <div
@@ -29,13 +31,13 @@ export function SiteFooter({ locale, dict }: Props) {
         }}
       >
         <div>
-          <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 20 }}>{dict.info.brand}</h3>
-          <p style={{ margin: "6px 0", color: "#64748b", fontSize: 13 }}>{dict.info.tagline}</p>
+          <h3 style={{ marginTop: 0, marginBottom: 10, fontSize: 20, color: "var(--footer-heading, inherit)" }}>{dict.info.brand}</h3>
+          <p style={{ margin: "6px 0", color: "var(--footer-muted, #64748b)", fontSize: 13 }}>{dict.info.tagline}</p>
           <p style={{ margin: "6px 0", fontSize: 13 }}>{dict.info.phones.join(" / ")}</p>
           <p style={{ margin: "6px 0", fontSize: 13 }}>{dict.info.email}</p>
         </div>
         <div>
-          <h4 style={{ marginTop: 0, marginBottom: 10, fontSize: 15 }}>{dict.info.customerTitle}</h4>
+          <h4 style={{ marginTop: 0, marginBottom: 10, fontSize: 15, color: "var(--footer-heading, inherit)" }}>{dict.info.customerTitle}</h4>
           <div style={{ display: "grid", gap: 6, fontSize: 13 }}>
             <Link href={mk("/delivery-payment")}>{dict.nav.delivery}</Link>
             <Link href={mk("/returns-exchange")}>{dict.nav.returns}</Link>
@@ -45,13 +47,13 @@ export function SiteFooter({ locale, dict }: Props) {
           </div>
         </div>
         <div>
-          <h4 style={{ marginTop: 0, marginBottom: 10, fontSize: 15 }}>{dict.info.contactsTitle}</h4>
+          <h4 style={{ marginTop: 0, marginBottom: 10, fontSize: 15, color: "var(--footer-heading, inherit)" }}>{dict.info.contactsTitle}</h4>
           <p style={{ margin: "6px 0", whiteSpace: "pre-wrap", fontSize: 13 }}>{dict.info.address}</p>
-          <p style={{ margin: "6px 0", color: "#64748b", fontSize: 13 }}>{dict.info.workHours}</p>
+          <p style={{ margin: "6px 0", color: "var(--footer-muted, #64748b)", fontSize: 13 }}>{dict.info.workHours}</p>
         </div>
         <div>
-          <h4 style={{ marginTop: 0, marginBottom: 10, fontSize: 15 }}>{dict.info.legalTitle}</h4>
-          <p style={{ margin: "6px 0", color: "#64748b", whiteSpace: "pre-wrap", fontSize: 12.5, lineHeight: 1.5 }}>
+          <h4 style={{ marginTop: 0, marginBottom: 10, fontSize: 15, color: "var(--footer-heading, inherit)" }}>{dict.info.legalTitle}</h4>
+          <p style={{ margin: "6px 0", color: "var(--footer-muted, #64748b)", whiteSpace: "pre-wrap", fontSize: 12.5, lineHeight: 1.5 }}>
             {dict.info.legal}
           </p>
         </div>

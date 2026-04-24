@@ -17,7 +17,7 @@ export function InfoPage({ title, body, dict }: Props) {
           </p>
         ))}
       </div>
-      <p style={{ marginTop: 20, color: "#64748b" }}>{dict.info.sourceNotice}</p>
+      <p style={{ marginTop: 20 }}>{dict.info.sourceNotice}</p>
     </section>
   );
 }

@@ -61,7 +61,7 @@ export default async function ProductPage({ params }: Props) {
   return (
     <div style={{ display: "grid", gap: 24 }}>
       <ProductViewTracker productId={product.id} />
-      <Link href={localizedPath("/products", locale)} style={{ color: "#64748b" }}>
+      <Link href={localizedPath("/products", locale)}>
         ← {dict.nav.catalog}
       </Link>
       <div
@@ -83,7 +83,7 @@ export default async function ProductPage({ params }: Props) {
           <p style={{ fontSize: "1.25rem", fontWeight: 600 }}>
             {formatMoney(product.price_cents, product.currency, locale)}
           </p>
-          <p style={{ color: "#64748b" }}>
+          <p>
             {dict.product.stock}: {product.stock}
           </p>
           <div style={{ marginTop: 16 }}>

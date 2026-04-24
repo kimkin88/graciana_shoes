@@ -138,7 +138,7 @@ export function CartView({ locale, dict }: Props) {
           >
             <div style={{ flex: "1 1 200px" }}>
               <Link href={href}>{title}</Link>
-              <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
+              <div style={{ fontSize: "0.85rem", color: "inherit" }}>
                 {formatMoney(p.price_cents, p.currency, locale)} {dict.cart.each}
               </div>
             </div>
