@@ -1,4 +1,61 @@
-const baseTheme = {
+type ThemeColors = {
+  background: string;
+  surface: string;
+  text: string;
+  textMuted: string;
+  border: string;
+  primary: string;
+  primaryHover: string;
+  danger: string;
+  success: string;
+  accent: string;
+  buttonPrimaryBg: string;
+  buttonPrimaryText: string;
+  buttonPrimaryBorder: string;
+  buttonPrimaryHoverBg: string;
+  buttonGhostBg: string;
+  buttonGhostText: string;
+  buttonGhostBorder: string;
+  buttonGhostHoverBg: string;
+  buttonGhostHoverText: string;
+};
+
+type BaseTheme = {
+  radii: {
+    sm: string;
+    md: string;
+    lg: string;
+    pill: string;
+  };
+  shadows: {
+    sm: string;
+    md: string;
+    glow: string;
+  };
+  space: {
+    xs: string;
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+    "2xl": string;
+  };
+  font: {
+    sans: string;
+    display: string;
+    mono: string;
+  };
+  breakpoints: {
+    md: string;
+    lg: string;
+  };
+};
+
+export type AppTheme = BaseTheme & {
+  colors: ThemeColors;
+};
+
+const baseTheme: BaseTheme = {
   radii: {
     sm: "8px",
     md: "12px",
@@ -27,7 +84,7 @@ const baseTheme = {
     md: "768px",
     lg: "1024px",
   },
-} as const;
+};
 
 export const lightTheme = {
   colors: {
@@ -52,7 +109,7 @@ export const lightTheme = {
     buttonGhostHoverText: "#ffffff",
   },
   ...baseTheme,
-} as const;
+} satisfies AppTheme;
 
 export const darkTheme = {
   colors: {
@@ -77,6 +134,4 @@ export const darkTheme = {
     buttonGhostHoverText: "#171210",
   },
   ...baseTheme,
-} as const;
-
-export type AppTheme = typeof lightTheme;
+} satisfies AppTheme;

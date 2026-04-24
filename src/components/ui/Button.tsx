@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 
-const buttonStyles = `
+const buttonStyles = css<{ $variant?: "primary" | "ghost" | "danger" }>`
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -75,10 +75,6 @@ export function ProductMediaGallery({ imageUrl, videoUrl, title }: Props) {
     slideChanged(s) {
       setActive(s.track.details.rel);
     },
-    animation: {
-      duration: 700,
-      easing: (t) => 1 + --t * t * t * t * t,
-    },
   });
 
   if (!items.length) return null;
@@ -93,7 +89,7 @@ export function ProductMediaGallery({ imageUrl, videoUrl, title }: Props) {
                 <MediaImage src={item.url} alt={title} width={1000} height={800} />
               ) : (
                 <div style={{ padding: 12 }}>
-                  <ReactPlayer url={item.url} controls width="100%" height={436} />
+                  <ReactPlayer src={item.url} controls width="100%" height={436} />
                 </div>
               )}
             </div>

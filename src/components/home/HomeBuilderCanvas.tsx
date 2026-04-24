@@ -163,7 +163,8 @@ export function HomeBuilderCanvas({
     return Math.round(value / HOME_BUILDER_GRID_STEP) * HOME_BUILDER_GRID_STEP;
   }
   function startDragElement(event: React.MouseEvent, item: HomeBuilderElement) {
-    if (!editable || !onUpdateElement) return;
+    const updateElement = onUpdateElement;
+    if (!editable || !updateElement) return;
     event.preventDefault();
     const startX = event.clientX;
     const startY = event.clientY;
@@ -173,7 +174,7 @@ export function HomeBuilderCanvas({
     function onMove(moveEvent: MouseEvent) {
       const dx = ((moveEvent.clientX - startX) / baseWidth) * 100;
       const dy = ((moveEvent.clientY - startY) / baseHeight) * 100;
-      onUpdateElement(item.id, {
+      updateElement?.(item.id, {
         x: snap(Math.max(0, Math.min(100 - item.width, item.x + dx))),
         y: snap(Math.max(0, Math.min(100, item.y + dy))),
       });
@@ -187,7 +188,8 @@ export function HomeBuilderCanvas({
   }
 
   function startResizeElement(event: React.MouseEvent, item: HomeBuilderElement) {
-    if (!editable || !onUpdateElement) return;
+    const updateElement = onUpdateElement;
+    if (!editable || !updateElement) return;
     event.preventDefault();
     event.stopPropagation();
     const startX = event.clientX;
@@ -198,7 +200,7 @@ export function HomeBuilderCanvas({
     function onMove(moveEvent: MouseEvent) {
       const dx = ((moveEvent.clientX - startX) / baseWidth) * 100;
       const dy = ((moveEvent.clientY - startY) / baseHeight) * 100;
-      onUpdateElement(item.id, {
+      updateElement?.(item.id, {
         width: snap(Math.max(6, Math.min(100 - item.x, item.width + dx))),
         height: snap(Math.max(6, Math.min(100 - item.y, item.height + dy))),
       });

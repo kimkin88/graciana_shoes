@@ -189,7 +189,10 @@ export function ProductForm({ mode, locale, dict, product }: Props) {
       <Field>
         <Label htmlFor="image_file">{dict.admin.imageFile}</Label>
         <FileUploader
-          handleChange={(file) => onImageFileChange(file ?? null)}
+          handleChange={(value) => {
+            const file = Array.isArray(value) ? value[0] : value;
+            onImageFileChange(file ?? null);
+          }}
           name="image_drop"
           types={["JPG", "JPEG", "PNG", "WEBP", "GIF"]}
         >
@@ -243,7 +246,10 @@ export function ProductForm({ mode, locale, dict, product }: Props) {
       <Field>
         <Label htmlFor="video_file">{dict.admin.videoFile}</Label>
         <FileUploader
-          handleChange={(file) => onVideoFileChange(file ?? null)}
+          handleChange={(value) => {
+            const file = Array.isArray(value) ? value[0] : value;
+            onVideoFileChange(file ?? null);
+          }}
           name="video_drop"
           types={["MP4", "MOV", "WEBM"]}
         >
@@ -265,7 +271,7 @@ export function ProductForm({ mode, locale, dict, product }: Props) {
       </Field>
       {videoPreview ? (
         <div style={{ marginBottom: 16, maxWidth: 320 }}>
-          <ReactPlayer url={videoPreview} controls width="100%" height={200} />
+          <ReactPlayer src={videoPreview} controls width="100%" height={200} />
           <a href={videoPreview} download style={{ display: "inline-flex", marginTop: 8, gap: 6 }}>
             <DownloadIcon />
             {dict.admin.downloadVideo}

@@ -41,10 +41,6 @@ export function ProductMediaSlider({ imageUrl, videoUrl, alt }: Props) {
       // keep internal for next/prev controls only
       void s.track.details.rel;
     },
-    animation: {
-      duration: 650,
-      easing: (t) => 1 + --t * t * t * t * t,
-    },
   });
 
   if (!media.length) return null;
