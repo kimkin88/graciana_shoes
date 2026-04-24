@@ -69,6 +69,20 @@ type HomeBuilderElement = {
   fontWeight?: number;
 };
 
+function normalizeBuilderElementType(
+  value: unknown,
+): HomeBuilderElement["type"] {
+  return value === "image" ||
+    value === "video" ||
+    value === "icon" ||
+    value === "product-group" ||
+    value === "story-viewed" ||
+    value === "story-searched" ||
+    value === "comments"
+    ? value
+    : "text";
+}
+
 function clamp(input: unknown, min: number, max: number, fallback: number) {
   const value = Number(input);
   if (Number.isNaN(value)) return fallback;
@@ -187,20 +201,11 @@ export async function updateMainPageConstructor(formData: FormData) {
       canvasBackground?: string;
       elements?: HomeBuilderElement[];
     };
-    const normalizedElements = Array.isArray(parsed.elements)
+    const normalizedElements: HomeBuilderElement[] = Array.isArray(parsed.elements)
       ? parsed.elements
           .map((item) => ({
             id: String(item.id ?? `el-${Date.now()}`),
-            type:
-              item.type === "image" ||
-              item.type === "video" ||
-              item.type === "icon" ||
-              item.type === "product-group" ||
-              item.type === "story-viewed" ||
-              item.type === "story-searched" ||
-              item.type === "comments"
-                ? item.type
-                : "text",
+            type: normalizeBuilderElementType(item.type),
             x: clamp(item.x, 0, 100, 0),
             y: clamp(item.y, 0, 100, 0),
             width: clamp(item.width, 4, 100, 20),
