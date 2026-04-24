@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { createClient } from "@/lib/supabase/server";
-import { fetchCategories, fetchProducts } from "@/lib/products/queries";
+import { fetchCategories, fetchProductOptions, fetchProducts } from "@/lib/products/queries";
 import { ProductGridMotion } from "@/components/motion/ProductGridMotion";
 import { ProductFilters } from "@/components/catalog/ProductFilters";
 
@@ -21,6 +21,8 @@ export default async function ProductsPage({
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : undefined;
   const category = typeof sp.category === "string" ? sp.category : undefined;
+  const color = typeof sp.color === "string" ? sp.color : undefined;
+  const size = typeof sp.size === "string" ? sp.size : undefined;
   const minRaw =
     typeof sp.min === "string" ? Number.parseInt(sp.min, 10) : undefined;
   const maxRaw =
@@ -30,14 +32,17 @@ export default async function ProductsPage({
 
   const dict = await getDictionary(locale);
   const supabase = await createClient();
-  const [products, categories] = await Promise.all([
+  const [products, categories, options] = await Promise.all([
     fetchProducts(supabase, {
       search: q,
       category,
+      color,
+      size,
       minCents: min,
       maxCents: max,
     }),
     fetchCategories(supabase),
+    fetchProductOptions(supabase),
   ]);
 
   return (
@@ -45,12 +50,16 @@ export default async function ProductsPage({
       <h1 style={{ margin: 0 }}>{dict.products.title}</h1>
 
       <ProductFilters
-        key={`${q ?? ""}-${category ?? ""}-${min ?? ""}-${max ?? ""}`}
+        key={`${q ?? ""}-${category ?? ""}-${color ?? ""}-${size ?? ""}-${min ?? ""}-${max ?? ""}`}
         locale={locale}
         dict={dict}
         categories={categories}
+        colors={options.colors}
+        sizes={options.sizes}
         initialQ={q}
         initialCategory={category}
+        initialColor={color}
+        initialSize={size}
         initialMin={typeof sp.min === "string" ? sp.min : ""}
         initialMax={typeof sp.max === "string" ? sp.max : ""}
       />

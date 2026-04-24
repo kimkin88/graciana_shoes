@@ -5,6 +5,7 @@ import { localizedPath } from "@/i18n/routing";
 import { formatMoney } from "@/lib/format/money";
 import { productTitle } from "@/lib/products/display";
 import type { ProductRow } from "@/types";
+import { ProductMediaSlider } from "@/components/product/ProductMediaSlider";
 
 type Props = { product: ProductRow; locale: Locale };
 
@@ -16,24 +17,10 @@ export function ProductCard({ product, locale }: Props) {
   return (
     <Card>
       <Link href={href} style={{ display: "block", color: "inherit" }}>
-        {product.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.image_url}
-            alt=""
-            width={640}
-            height={360}
-            style={{
-              width: "100%",
-              height: 200,
-              objectFit: "cover",
-              display: "block",
-            }}
-          />
-        ) : null}
+        <ProductMediaSlider imageUrl={product.image_url} videoUrl={product.video_url} alt={title} />
         <CardBody>
           <h3 style={{ margin: "0 0 8px", fontSize: "1.05rem" }}>{title}</h3>
-          <p style={{ margin: 0, color: "#64748b", fontSize: "0.9rem" }}>
+          <p style={{ margin: 0, color: "var(--muted-price, #64748b)", fontSize: "0.9rem" }}>
             {formatMoney(product.price_cents, product.currency, locale)}
           </p>
         </CardBody>

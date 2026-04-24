@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Supabase-aware middleware helper. Call from root `middleware.ts` to refresh sessions.
+ * Supabase-aware proxy helper. Call from root `proxy.ts` to refresh sessions.
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

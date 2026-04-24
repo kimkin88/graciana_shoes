@@ -11,7 +11,11 @@ export type ProductRow = {
   price_cents: MoneyCents;
   currency: string;
   image_url: string | null;
+  video_url: string | null;
   category: string | null;
+  group_key: string | null;
+  colors: string[];
+  sizes: string[];
   featured: boolean;
   active: boolean;
   stock: number;

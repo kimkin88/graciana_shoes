@@ -9,6 +9,8 @@ import { fetchProductBySlug } from "@/lib/products/queries";
 import { productDescription, productTitle } from "@/lib/products/display";
 import { formatMoney } from "@/lib/format/money";
 import { AddToCartButton } from "@/components/product/AddToCartButton";
+import { ProductMediaGallery } from "@/components/product/ProductMediaGallery";
+import { ProductViewTracker } from "@/components/product/ProductViewTracker";
 import { ProductGridMotion } from "@/components/motion/ProductGridMotion";
 import type { ProductRow } from "@/types";
 
@@ -58,6 +60,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div style={{ display: "grid", gap: 24 }}>
+      <ProductViewTracker productId={product.id} />
       <Link href={localizedPath("/products", locale)} style={{ color: "#64748b" }}>
         ← {dict.nav.catalog}
       </Link>
@@ -69,16 +72,11 @@ export default async function ProductPage({ params }: Props) {
         }}
       >
         <div>
-          {product.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.image_url}
-              alt=""
-              width={800}
-              height={600}
-              style={{ width: "100%", borderRadius: 12, objectFit: "cover" }}
-            />
-          ) : null}
+          <ProductMediaGallery
+            imageUrl={product.image_url}
+            videoUrl={product.video_url}
+            title={title}
+          />
         </div>
         <div>
           <h1 style={{ marginTop: 0 }}>{title}</h1>

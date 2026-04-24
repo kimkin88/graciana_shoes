@@ -15,6 +15,11 @@ export const GlobalStyles = createGlobalStyle`
     color: ${({ theme }) => theme.colors.text};
     background: ${({ theme }) => theme.colors.background};
     -webkit-font-smoothing: antialiased;
+    transition: background 0.25s ease, color 0.25s ease;
+    --muted-price: ${({ theme }) => theme.colors.textMuted};
+    --promo-bg: ${({ theme }) => theme.colors.text};
+    --promo-text: ${({ theme }) => theme.colors.background};
+    letter-spacing: 0.01em;
   }
 
   * {
@@ -24,6 +29,21 @@ export const GlobalStyles = createGlobalStyle`
   a {
     color: inherit;
     text-decoration: none;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: ${({ theme }) => theme.font.display};
+    letter-spacing: 0.015em;
+    line-height: 1.12;
+  }
+
+  ::selection {
+    background: ${({ theme }) => theme.colors.accent};
   }
 
   button {

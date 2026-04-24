@@ -18,6 +18,10 @@ const Panel = styled(motion.div)`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radii.lg};
   background: ${({ theme }) => theme.colors.surface};
+  @media (max-width: 700px) {
+    padding: 12px;
+    gap: 12px;
+  }
 `;
 
 const Row = styled.div`
@@ -25,6 +29,9 @@ const Row = styled.div`
   flex-wrap: wrap;
   gap: ${({ theme }) => theme.space.md};
   align-items: flex-end;
+  @media (max-width: 700px) {
+    gap: 10px;
+  }
 `;
 
 const Field = styled.div`
@@ -33,6 +40,10 @@ const Field = styled.div`
   gap: 4px;
   min-width: 140px;
   flex: 1 1 160px;
+  @media (max-width: 700px) {
+    min-width: 100%;
+    flex: 1 1 100%;
+  }
 `;
 
 const Label = styled.span`
@@ -50,12 +61,19 @@ const SelectTrigger = styled(Select.Trigger)`
   border-radius: ${({ theme }) => theme.radii.md};
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
   &:focus {
     outline: 2px solid ${({ theme }) => theme.colors.primary};
     outline-offset: 1px;
   }
+`;
+
+const SelectIconWrap = styled(Select.Icon)`
+  margin-left: 8px;
+  color: ${({ theme }) => theme.colors.text};
 `;
 
 const SelectContent = styled(Select.Content)`
@@ -70,10 +88,49 @@ const SelectContent = styled(Select.Content)`
 const SelectItem = styled(Select.Item)`
   padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
   font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.text};
   cursor: pointer;
   outline: none;
   &[data-highlighted] {
     background: ${({ theme }) => theme.colors.background};
+  }
+`;
+
+const Actions = styled.div`
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  @media (max-width: 700px) {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+`;
+
+const ApplyButton = styled(Button)`
+  min-width: 140px;
+  background: ${({ theme }) => theme.colors.buttonPrimaryBg};
+  color: ${({ theme }) => theme.colors.buttonPrimaryText};
+  border-color: ${({ theme }) => theme.colors.buttonPrimaryBorder};
+  @media (max-width: 700px) {
+    width: 100%;
+    min-width: 0;
+  }
+`;
+
+const ResetButton = styled(Button)`
+  min-width: 120px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.text};
+  border-color: ${({ theme }) => theme.colors.textMuted};
+  box-shadow: none;
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.accent};
+    color: ${({ theme }) => theme.colors.text};
+    border-color: ${({ theme }) => theme.colors.text};
+  }
+  @media (max-width: 700px) {
+    width: 100%;
+    min-width: 0;
   }
 `;
 
@@ -83,8 +140,12 @@ type Props = {
   locale: Locale;
   dict: Messages;
   categories: string[];
+  colors: string[];
+  sizes: string[];
   initialQ?: string;
   initialCategory?: string;
+  initialColor?: string;
+  initialSize?: string;
   initialMin?: string;
   initialMax?: string;
 };
@@ -94,8 +155,12 @@ export function ProductFilters({
   locale,
   dict,
   categories,
+  colors,
+  sizes,
   initialQ = "",
   initialCategory = "",
+  initialColor = "",
+  initialSize = "",
   initialMin = "",
   initialMax = "",
 }: Props) {
@@ -106,6 +171,8 @@ export function ProductFilters({
 
   const [q, setQ] = useState(initialQ);
   const [category, setCategory] = useState(initialCategory || ALL);
+  const [color, setColor] = useState(initialColor || ALL);
+  const [size, setSize] = useState(initialSize || ALL);
   const [min, setMin] = useState(initialMin);
   const [max, setMax] = useState(initialMax);
 
@@ -118,16 +185,20 @@ export function ProductFilters({
     const params = new URLSearchParams();
     if (q.trim()) params.set("q", q.trim());
     if (category && category !== ALL) params.set("category", category);
+    if (color && color !== ALL) params.set("color", color);
+    if (size && size !== ALL) params.set("size", size);
     if (min.trim()) params.set("min", min.trim());
     if (max.trim()) params.set("max", max.trim());
     const qs = params.toString();
     const target = pathname?.startsWith("/") ? pathname : baseList;
     router.push(qs ? `${target}?${qs}` : target);
-  }, [q, category, min, max, router, pathname, baseList]);
+  }, [q, category, color, size, min, max, router, pathname, baseList]);
 
   const reset = useCallback(() => {
     setQ("");
     setCategory(ALL);
+    setColor(ALL);
+    setSize(ALL);
     setMin("");
     setMax("");
     router.push(pathname?.startsWith("/") ? pathname : baseList);
@@ -152,7 +223,7 @@ export function ProductFilters({
           >
             <SelectTrigger aria-label={dict.products.category}>
               <Select.Value placeholder={dict.products.allCategories} />
-              <Select.Icon style={{ marginLeft: 8 }}>▾</Select.Icon>
+              <SelectIconWrap>▾</SelectIconWrap>
             </SelectTrigger>
             <Select.Portal>
               <SelectContent position="popper" sideOffset={4}>
@@ -161,6 +232,48 @@ export function ProductFilters({
                   {categories.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
+                    </SelectItem>
+                  ))}
+                </Select.Viewport>
+              </SelectContent>
+            </Select.Portal>
+          </Select.Root>
+        </Field>
+        <Field style={{ width: 120, flex: "0 0 120px" }}>
+          <Label>{dict.products.color}</Label>
+          <Select.Root value={color} onValueChange={(v) => setColor(v === ALL ? ALL : v)}>
+            <SelectTrigger aria-label={dict.products.color}>
+              <Select.Value placeholder={dict.products.allColors} />
+              <SelectIconWrap>▾</SelectIconWrap>
+            </SelectTrigger>
+            <Select.Portal>
+              <SelectContent position="popper" sideOffset={4}>
+                <Select.Viewport>
+                  <SelectItem value={ALL}>{dict.products.allColors}</SelectItem>
+                  {colors.map((v) => (
+                    <SelectItem key={v} value={v}>
+                      {v}
+                    </SelectItem>
+                  ))}
+                </Select.Viewport>
+              </SelectContent>
+            </Select.Portal>
+          </Select.Root>
+        </Field>
+        <Field style={{ width: 120, flex: "0 0 120px" }}>
+          <Label>{dict.products.size}</Label>
+          <Select.Root value={size} onValueChange={(v) => setSize(v === ALL ? ALL : v)}>
+            <SelectTrigger aria-label={dict.products.size}>
+              <Select.Value placeholder={dict.products.allSizes} />
+              <SelectIconWrap>▾</SelectIconWrap>
+            </SelectTrigger>
+            <Select.Portal>
+              <SelectContent position="popper" sideOffset={4}>
+                <Select.Viewport>
+                  <SelectItem value={ALL}>{dict.products.allSizes}</SelectItem>
+                  {sizes.map((v) => (
+                    <SelectItem key={v} value={v}>
+                      {v}
                     </SelectItem>
                   ))}
                 </Select.Viewport>
@@ -187,14 +300,14 @@ export function ProductFilters({
           />
         </Field>
       </Row>
-      <div style={{ display: "flex", gap: 8 }}>
-        <Button type="button" onClick={apply}>
+      <Actions>
+        <ApplyButton type="button" onClick={apply}>
           {dict.products.apply}
-        </Button>
-        <Button type="button" $variant="ghost" onClick={reset}>
+        </ApplyButton>
+        <ResetButton type="button" onClick={reset}>
           {dict.products.reset}
-        </Button>
-      </div>
+        </ResetButton>
+      </Actions>
     </Panel>
   );
 }

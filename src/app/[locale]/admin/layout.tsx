@@ -34,6 +34,9 @@ export default async function AdminLayout({
           <Link href={localizedPath("/admin/products", locale)}>
             {dict.admin.products}
           </Link>
+          <Link href={localizedPath("/admin/groups", locale)}>
+            {dict.admin.groups}
+          </Link>
           <Link href={localizedPath("/admin/orders", locale)}>
             {dict.admin.orders}
           </Link>

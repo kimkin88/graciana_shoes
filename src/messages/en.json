@@ -6,6 +6,13 @@
   "nav": {
     "home": "Home",
     "catalog": "Catalog",
+    "delivery": "Delivery & payment",
+    "contacts": "Contacts",
+    "returns": "Returns",
+    "howToOrder": "How to order",
+    "installment": "Installment 0%",
+    "promotions": "Promotions",
+    "about": "About",
     "cart": "Cart",
     "account": "Account",
     "orders": "Orders",
@@ -16,6 +23,8 @@
   },
   "home": {
     "featured": "Featured products",
+    "recentlyViewed": "Recently viewed shoes",
+    "heroAlt": "Main store banner",
     "viewAll": "View all",
     "empty": "No products yet. Add some in the admin panel."
   },
@@ -26,6 +35,10 @@
     "allCategories": "All",
     "priceMin": "Price from",
     "priceMax": "to",
+    "color": "Color",
+    "size": "Size",
+    "allColors": "All colors",
+    "allSizes": "All sizes",
     "apply": "Apply",
     "reset": "Reset",
     "noResults": "No results",
@@ -76,6 +89,8 @@
     "title": "Admin",
     "stats": "Statistics",
     "products": "Products",
+    "groups": "Groups",
+    "groupsEmpty": "No groups configured yet.",
     "orders": "Orders",
     "revenue30d": "Revenue (30 days)",
     "orders30d": "Orders (30 days)",
@@ -93,19 +108,92 @@
     "price": "Price (minor units, e.g. cents)",
     "currency": "Currency",
     "category": "Category",
+    "groupKey": "Homepage group key",
+    "groupKeyHint": "e.g. new-arrivals, sandals, best-sellers",
+    "updateGroup": "Update group",
     "stock": "Stock",
     "featured": "Featured on home",
     "active": "Active",
     "imageUrl": "Image URL",
+    "imageFile": "Upload image",
+    "dropImage": "Drop image here or click to upload",
+    "imagePreview": "Image preview",
+    "downloadImage": "Download image",
+    "videoUrl": "Video URL",
+    "videoFile": "Upload video",
+    "dropVideo": "Drop video here or click to upload",
+    "downloadVideo": "Download video",
+    "colors": "Colors",
+    "sizes": "Sizes",
+    "multiValueHint": "Comma separated (e.g. black, white, red)",
     "orderList": "All orders",
     "customer": "Customer",
-    "forbidden": "Access denied"
+    "forbidden": "Access denied",
+    "homeHero": "Homepage main image",
+    "homeHeroUrl": "Homepage image URL",
+    "homeHeroSizeHint": "Recommended size: 1920 x 720 px (ratio 8:3). Upload and crop before saving.",
+    "cropApply": "Apply crop"
+  },
+  "info": {
+    "brand": "GRACIANA Women's Shoes",
+    "tagline": "Fashion footwear with delivery across Belarus.",
+    "phones": ["+375 (29) 746-01-14", "+375 (29) 809-19-56"],
+    "email": "graciana.by@gmail.com",
+    "address": "Minsk: Kalvariyskaya 24, Korona Mall, 2nd floor, \"GRACIANA\".\nBrest: Masherova 17B, TC \"Moskva\", shops 14 and 27.",
+    "workHours": "Working hours: daily 09:00-22:00 (Minsk, Belarus).",
+    "customerTitle": "Customer information",
+    "contactsTitle": "Store contacts",
+    "legalTitle": "Legal details",
+    "legal": "OOO \"GracianaExclusive\"\nUNP: 291888248\nTrade register number: 740229\nRegistered: 03.01.2025",
+    "sourceNotice": "Store and legal details are adapted from official public profile.",
+    "deliveryTitle": "Delivery and payment",
+    "deliveryBody": [
+      "We deliver orders in Belarus. Delivery terms depend on city and stock location.",
+      "Payment methods: online bank card and available in-store options.",
+      "After placing order, manager confirms model, size and delivery details."
+    ],
+    "returnsTitle": "Returns and exchange",
+    "returnsBody": [
+      "You can request return or exchange according to Belarus consumer law.",
+      "Keep product condition, package and purchase documents.",
+      "Contact manager first to get exact return instructions for your order."
+    ],
+    "howToOrderTitle": "How to order",
+    "howToOrderBody": [
+      "Choose model, size and color in catalog.",
+      "Add product to cart and complete checkout.",
+      "Manager contacts you to confirm order and delivery details."
+    ],
+    "installmentTitle": "Installment 0%",
+    "installmentBody": [
+      "Installment plans are available for selected products.",
+      "Final terms depend on your payment provider and current campaigns.",
+      "Contact manager to confirm options before payment."
+    ],
+    "promotionsTitle": "Promotions",
+    "promotionsBody": [
+      "Seasonal campaigns and model discounts are available.",
+      "Promotion periods are limited and stock may run out quickly.",
+      "Check this page and catalog badges for current offers."
+    ],
+    "aboutTitle": "About GRACIANA",
+    "aboutBody": [
+      "GRACIANA is a women's footwear brand focused on modern and wearable models.",
+      "We operate stores in Minsk and Brest and support online shopping.",
+      "Our team helps with size, fit and model recommendations."
+    ],
+    "contactsPageTitle": "Contacts"
   },
   "common": {
     "loading": "Loading…",
     "error": "Something went wrong",
     "retry": "Retry",
-    "language": "Language"
+    "language": "Language",
+    "menu": "Menu",
+    "openMenu": "Open navigation menu",
+    "closeMenu": "Close navigation menu",
+    "freeShipping": "Free shipping on orders over 250 BYN",
+    "socialLinks": "Social links"
   },
   "toast": {
     "checkoutFailed": "Checkout could not start",

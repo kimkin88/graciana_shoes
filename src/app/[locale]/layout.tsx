@@ -4,6 +4,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SyncHtmlLang } from "@/components/i18n/SyncHtmlLang";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 export function generateStaticParams() {
   return [{ locale: "ru" }, { locale: "en" }];
@@ -33,20 +34,24 @@ export default async function LocaleLayout({
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale = raw as Locale;
+  const dict = await getDictionary(locale);
 
   return (
-    <>
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <SyncHtmlLang locale={locale} />
       <SiteHeader locale={locale} />
       <div
         style={{
           maxWidth: 1100,
           margin: "0 auto",
-          padding: "16px 16px 48px",
+          padding: "12px 12px 36px",
+          width: "100%",
+          flex: 1,
         }}
       >
         {children}
       </div>
-    </>
+      <SiteFooter locale={locale} dict={dict} />
+    </div>
   );
 }

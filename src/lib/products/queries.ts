@@ -4,6 +4,8 @@ import type { ProductRow } from "@/types";
 export type ProductFilters = {
   search?: string;
   category?: string;
+  color?: string;
+  size?: string;
   minCents?: number;
   maxCents?: number;
   featuredOnly?: boolean;
@@ -12,6 +14,22 @@ export type ProductFilters = {
 /** Escape `%` / `_` for Postgres `ilike` patterns. */
 function escapeIlike(value: string) {
   return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
+function logProductsQueryError(
+  context: "fetchProducts" | "fetchProductBySlug" | "fetchCategories" | "fetchProductOptions",
+  error: { code?: string | null; message?: string; details?: string | null; hint?: string | null },
+) {
+  console.error(`[products:${context}] ${error.code ?? "unknown"} ${error.message ?? "Unknown error"}`, {
+    code: error.code ?? null,
+    details: error.details ?? null,
+    hint: error.hint ?? null,
+  });
+  if (error.code === "42P17") {
+    console.error(
+      "[products] Detected Postgres RLS policy recursion. Apply migration `003_fix_profiles_rls_recursion.sql` to your Supabase database.",
+    );
+  }
 }
 
 /** Public catalog query — respects `active` via RLS for anonymous users. */
@@ -31,6 +49,12 @@ export async function fetchProducts(
   if (filters.category) {
     q = q.eq("category", filters.category);
   }
+  if (filters.color) {
+    q = q.contains("colors", [filters.color.toLowerCase()]);
+  }
+  if (filters.size) {
+    q = q.contains("sizes", [filters.size.toLowerCase()]);
+  }
 
   if (filters.search && filters.search.trim()) {
     const s = escapeIlike(filters.search.trim());
@@ -46,7 +70,7 @@ export async function fetchProducts(
 
   const { data, error } = await q;
   if (error) {
-    console.error(error);
+    logProductsQueryError("fetchProducts", error);
     return [];
   }
   return (data ?? []) as ProductRow[];
@@ -62,7 +86,7 @@ export async function fetchProductBySlug(
     .eq("slug", slug)
     .maybeSingle();
   if (error) {
-    console.error(error);
+    logProductsQueryError("fetchProductBySlug", error);
     return null;
   }
   return data as ProductRow | null;
@@ -76,7 +100,7 @@ export async function fetchCategories(
     .select("category")
     .not("category", "is", null);
   if (error) {
-    console.error(error);
+    logProductsQueryError("fetchCategories", error);
     return [];
   }
   const set = new Set<string>();
@@ -84,4 +108,28 @@ export async function fetchCategories(
     if (row.category) set.add(row.category);
   }
   return [...set].sort();
+}
+
+export async function fetchProductOptions(
+  supabase: SupabaseClient,
+): Promise<{ colors: string[]; sizes: string[] }> {
+  const { data, error } = await supabase.from("products").select("colors,sizes");
+  if (error) {
+    logProductsQueryError("fetchProductOptions", error);
+    return { colors: [], sizes: [] };
+  }
+  const colors = new Set<string>();
+  const sizes = new Set<string>();
+  for (const row of data ?? []) {
+    for (const color of row.colors ?? []) {
+      if (color) colors.add(String(color));
+    }
+    for (const size of row.sizes ?? []) {
+      if (size) sizes.add(String(size));
+    }
+  }
+  return {
+    colors: [...colors].sort(),
+    sizes: [...sizes].sort(),
+  };
 }

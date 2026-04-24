@@ -11,7 +11,7 @@ function pathnameHasLocale(pathname: string): boolean {
  * Locale: every page lives under `/ru/...` or `/en/...` (default redirect to `ru`).
  * Supabase: refresh auth cookies on navigations (except static assets / API handled first).
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/api/")) {

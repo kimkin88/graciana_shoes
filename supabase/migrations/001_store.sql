@@ -16,18 +16,26 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'admin'
+  );
+$$;
+
 create policy "profiles_select_own"
   on public.profiles for select
   using (auth.uid() = id);
 
 create policy "profiles_select_admin"
   on public.profiles for select
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (public.is_admin());
 
 create policy "profiles_update_own"
   on public.profiles for update
@@ -47,7 +55,11 @@ create table if not exists public.products (
   price_cents integer not null check (price_cents >= 0),
   currency text not null default 'usd',
   image_url text,
+  video_url text,
   category text,
+  group_key text,
+  colors text[] not null default '{}',
+  sizes text[] not null default '{}',
   featured boolean not null default false,
   active boolean not null default true,
   stock integer not null default 0 check (stock >= 0),
@@ -57,6 +69,24 @@ create table if not exists public.products (
 
 create index if not exists products_category_idx on public.products (category);
 create index if not exists products_active_featured_idx on public.products (active, featured);
+create index if not exists products_group_key_idx on public.products (group_key);
+create index if not exists products_colors_idx on public.products using gin (colors);
+create index if not exists products_sizes_idx on public.products using gin (sizes);
+
+create table if not exists public.site_settings (
+  id integer primary key,
+  hero_image_url text
+);
+
+insert into public.site_settings (id, hero_image_url)
+values (1, null)
+on conflict (id) do nothing;
+
+alter table public.site_settings enable row level security;
+
+create policy "site_settings_public_read"
+  on public.site_settings for select
+  using (true);
 
 alter table public.products enable row level security;
 
@@ -66,45 +96,20 @@ create policy "products_public_read"
 
 create policy "products_admin_read_all"
   on public.products for select
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (public.is_admin());
 
 create policy "products_admin_write"
   on public.products for insert
-  with check (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  with check (public.is_admin());
 
 create policy "products_admin_update"
   on public.products for update
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  )
-  with check (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (public.is_admin())
+  with check (public.is_admin());
 
 create policy "products_admin_delete"
   on public.products for delete
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (public.is_admin());
 
 -- ---------------------------------------------------------------------------
 -- orders
@@ -131,12 +136,7 @@ create policy "orders_select_own"
 
 create policy "orders_select_admin"
   on public.orders for select
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (public.is_admin());
 
 create policy "orders_service_insert"
   on public.orders for insert
@@ -175,12 +175,7 @@ create policy "order_items_select_via_order"
 
 create policy "order_items_select_admin"
   on public.order_items for select
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid() and p.role = 'admin'
-    )
-  );
+  using (public.is_admin());
 
 -- ---------------------------------------------------------------------------
 -- pending_checkouts (server-only via service role; no policies = no user access)

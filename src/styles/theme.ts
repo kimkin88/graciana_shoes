@@ -1,28 +1,14 @@
-/**
- * Central design tokens for styled-components ThemeProvider.
- * Extend this object as the storefront UI grows (spacing scale, radii, etc.).
- */
-export const theme = {
-  colors: {
-    background: "#fafafa",
-    surface: "#ffffff",
-    text: "#0f172a",
-    textMuted: "#64748b",
-    border: "#e2e8f0",
-    primary: "#2563eb",
-    primaryHover: "#1d4ed8",
-    danger: "#dc2626",
-    success: "#16a34a",
-  },
+const baseTheme = {
   radii: {
-    sm: "6px",
-    md: "10px",
-    lg: "16px",
+    sm: "8px",
+    md: "12px",
+    lg: "18px",
     pill: "9999px",
   },
   shadows: {
-    sm: "0 1px 2px rgb(15 23 42 / 6%)",
-    md: "0 8px 24px rgb(15 23 42 / 8%)",
+    sm: "0 2px 10px rgb(15 23 42 / 8%)",
+    md: "0 12px 30px rgb(15 23 42 / 12%)",
+    glow: "0 0 0 1px rgb(59 130 246 / 30%), 0 10px 30px rgb(59 130 246 / 20%)",
   },
   space: {
     xs: "4px",
@@ -33,8 +19,9 @@ export const theme = {
     "2xl": "48px",
   },
   font: {
-    sans: "var(--font-geist-sans), system-ui, sans-serif",
-    mono: "var(--font-geist-mono), ui-monospace, monospace",
+    sans: "var(--font-manrope), system-ui, sans-serif",
+    display: "var(--font-cormorant), Georgia, serif",
+    mono: "ui-monospace, SFMono-Regular, Menlo, monospace",
   },
   breakpoints: {
     md: "768px",
@@ -42,4 +29,54 @@ export const theme = {
   },
 } as const;
 
-export type AppTheme = typeof theme;
+export const lightTheme = {
+  colors: {
+    background: "#f7f5f1",
+    surface: "#ffffff",
+    text: "#1f1a17",
+    textMuted: "#6b625d",
+    border: "#e5ddd4",
+    primary: "#1f1a17",
+    primaryHover: "#3a312d",
+    danger: "#9f2f2f",
+    success: "#1f6b45",
+    accent: "#efe5da",
+    buttonPrimaryBg: "#1f1a17",
+    buttonPrimaryText: "#ffffff",
+    buttonPrimaryBorder: "#1f1a17",
+    buttonPrimaryHoverBg: "#3a312d",
+    buttonGhostBg: "#f3ece4",
+    buttonGhostText: "#1f1a17",
+    buttonGhostBorder: "#8e8178",
+    buttonGhostHoverBg: "#1f1a17",
+    buttonGhostHoverText: "#ffffff",
+  },
+  ...baseTheme,
+} as const;
+
+export const darkTheme = {
+  colors: {
+    background: "#13100e",
+    surface: "#1d1714",
+    text: "#f6f1ea",
+    textMuted: "#c7bbb0",
+    border: "#3d2f27",
+    primary: "#f6f1ea",
+    primaryHover: "#f0e6da",
+    danger: "#ff6f61",
+    success: "#68d391",
+    accent: "#2a211c",
+    buttonPrimaryBg: "#f6f1ea",
+    buttonPrimaryText: "#171210",
+    buttonPrimaryBorder: "#f6f1ea",
+    buttonPrimaryHoverBg: "#e7dacb",
+    buttonGhostBg: "#2a211c",
+    buttonGhostText: "#f6f1ea",
+    buttonGhostBorder: "#a28f83",
+    buttonGhostHoverBg: "#f6f1ea",
+    buttonGhostHoverText: "#171210",
+  },
+  ...baseTheme,
+} as const;
+
+export type AppTheme = typeof lightTheme;
