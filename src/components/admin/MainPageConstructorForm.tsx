@@ -673,7 +673,9 @@ export function MainPageConstructorForm({
                   <label>{labels.imageUrl}</label>
                   <input value={selected.imageUrl} onChange={(e) => updateElement(selected.id, { imageUrl: e.target.value })} />
                   <FileUploader
-                    handleChange={(file: File) => {
+                    handleChange={(value: File | File[]) => {
+                      const file = Array.isArray(value) ? value[0] : value;
+                      if (!file) return;
                       void handleImageFileSelected(file, selected.id);
                     }}
                     name="constructor-image-file"
@@ -727,7 +729,9 @@ export function MainPageConstructorForm({
                     placeholder="https://..."
                   />
                   <FileUploader
-                    handleChange={(file: File) => {
+                    handleChange={(value: File | File[]) => {
+                      const file = Array.isArray(value) ? value[0] : value;
+                      if (!file) return;
                       void handleVideoFileSelected(file, selected.id);
                     }}
                     name="constructor-video-file"
