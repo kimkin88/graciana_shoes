@@ -7,8 +7,8 @@ import { deleteProduct } from "@/app/actions/admin-products";
 import { formatMoney } from "@/lib/format/money";
 import { productTitle } from "@/lib/products/display";
 import type { ProductRow } from "@/types";
-import { Button } from "@/components/ui/Button";
-import { AdminButtonLink } from "@/components/admin/AdminButtons";
+import { AdminButton, AdminButtonLink } from "@/components/admin/AdminButtons";
+import { Trash2 } from "lucide-react";
 
 export default async function AdminProductsPage({
   params,
@@ -67,9 +67,19 @@ export default async function AdminProductsPage({
                   <form action={deleteProduct}>
                     <input type="hidden" name="locale" value={locale} />
                     <input type="hidden" name="id" value={p.id} />
-                    <Button type="submit" $variant="danger">
+                    <AdminButton
+                      type="submit"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        paddingInline: 14,
+                        color: "#9f2f2f",
+                      }}
+                    >
+                      <Trash2 size={14} />
                       {dict.admin.delete}
-                    </Button>
+                    </AdminButton>
                   </form>
                 </td>
               </tr>

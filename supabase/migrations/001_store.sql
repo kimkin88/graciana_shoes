@@ -75,7 +75,12 @@ create index if not exists products_sizes_idx on public.products using gin (size
 
 create table if not exists public.site_settings (
   id integer primary key,
-  hero_image_url text
+  hero_image_url text,
+  home_intro_title text,
+  home_intro_body text,
+  home_intro_layout jsonb not null default '{}'::jsonb,
+  home_sections jsonb not null default '[]'::jsonb,
+  home_builder jsonb not null default '{}'::jsonb
 );
 
 insert into public.site_settings (id, hero_image_url)

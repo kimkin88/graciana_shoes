@@ -13,6 +13,59 @@ function readLocale(formData: FormData): Locale {
   return isLocale(raw) ? raw : "ru";
 }
 
+type MainPageSection = {
+  key: string;
+  title?: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  enabled?: boolean;
+  x?: number;
+  y?: number;
+  widthPx?: number;
+  heightPx?: number;
+  width?: "full" | "wide" | "compact";
+  height?: "auto" | "small" | "medium" | "large";
+  titleSize?: number;
+  subtitleSize?: number;
+  titleWeight?: "400" | "500" | "600" | "700" | "800";
+  subtitleWeight?: "400" | "500" | "600" | "700";
+  titleFont?: "display" | "sans";
+  subtitleFont?: "display" | "sans";
+};
+type IntroLayout = {
+  titleX?: number;
+  titleY?: number;
+  bodyX?: number;
+  bodyY?: number;
+  titleXMobile?: number;
+  titleYMobile?: number;
+  bodyXMobile?: number;
+  bodyYMobile?: number;
+};
+type HomeBuilderElement = {
+  id: string;
+  type: "text" | "image" | "icon";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  content?: string;
+  href?: string;
+  imageUrl?: string;
+  icon?: string;
+  color?: string;
+  background?: string;
+  fontSize?: number;
+  fontWeight?: number;
+};
+
+function clamp(input: unknown, min: number, max: number, fallback: number) {
+  const value = Number(input);
+  if (Number.isNaN(value)) return fallback;
+  return Math.max(min, Math.min(max, value));
+}
+
 export async function updateHomeHeroImage(formData: FormData) {
   const locale = readLocale(formData);
   const supabase = await createClient();
@@ -50,4 +103,169 @@ export async function updateHomeHeroImage(formData: FormData) {
   revalidatePath(`/${locale}`, "page");
   revalidatePath(`/${locale}/admin`, "page");
   redirect(localizedPath("/admin", locale));
+}
+
+export async function updateMainPageConstructor(formData: FormData) {
+  const locale = readLocale(formData);
+  const supabase = await createClient();
+  if (!(await isAdmin(supabase))) {
+    redirect(localizedPath("/", locale));
+  }
+  const service = createServiceClient();
+
+  let heroImageUrl = String(formData.get("hero_image_url") ?? "").trim() || null;
+  const rawFile = formData.get("hero_image_file");
+  if (rawFile instanceof File && rawFile.size > 0) {
+    const extension = rawFile.name.includes(".")
+      ? rawFile.name.split(".").pop()?.toLowerCase() ?? "jpg"
+      : "jpg";
+    const filePath = `site/hero-${Date.now()}.${extension}`;
+    const { error } = await service.storage
+      .from("product-images")
+      .upload(filePath, rawFile, { contentType: rawFile.type, upsert: false });
+    if (error) {
+      console.error("[admin-site:constructor-hero-upload]", error);
+      redirect(`${localizedPath("/admin/main-page-constructor", locale)}?error=hero_upload`);
+    }
+    const { data } = service.storage.from("product-images").getPublicUrl(filePath);
+    heroImageUrl = data.publicUrl;
+  }
+
+  const introTitle = String(formData.get("home_intro_title") ?? "").trim() || null;
+  const introBody = String(formData.get("home_intro_body") ?? "").trim() || null;
+  let introLayout: IntroLayout = {};
+  try {
+    const raw = String(formData.get("home_intro_layout_json") ?? "{}");
+    const parsed = JSON.parse(raw) as IntroLayout;
+    introLayout = {
+      titleX: clamp(parsed.titleX, 0, 100, 8),
+      titleY: clamp(parsed.titleY, 0, 100, 14),
+      bodyX: clamp(parsed.bodyX, 0, 100, 8),
+      bodyY: clamp(parsed.bodyY, 0, 100, 24),
+      titleXMobile: clamp(parsed.titleXMobile, 0, 100, 6),
+      titleYMobile: clamp(parsed.titleYMobile, 0, 100, 12),
+      bodyXMobile: clamp(parsed.bodyXMobile, 0, 100, 6),
+      bodyYMobile: clamp(parsed.bodyYMobile, 0, 100, 24),
+    };
+  } catch {
+    introLayout = {};
+  }
+  let homeBuilder: { canvasHeight: number; elements: HomeBuilderElement[] } = {
+    canvasHeight: 1200,
+    elements: [],
+  };
+  try {
+    const raw = String(formData.get("home_builder_json") ?? "{}");
+    const parsed = JSON.parse(raw) as {
+      canvasHeight?: number;
+      elements?: HomeBuilderElement[];
+    };
+    homeBuilder = {
+      canvasHeight: clamp(parsed.canvasHeight, 800, 5000, 1200),
+      elements: Array.isArray(parsed.elements)
+        ? parsed.elements
+            .map((item) => ({
+              id: String(item.id ?? `el-${Date.now()}`),
+              type: item.type === "image" || item.type === "icon" ? item.type : "text",
+              x: clamp(item.x, 0, 100, 0),
+              y: clamp(item.y, 0, 100, 0),
+              width: clamp(item.width, 4, 100, 20),
+              height: clamp(item.height, 4, 100, 12),
+              content: String(item.content ?? "").trim() || undefined,
+              href: String(item.href ?? "").trim() || undefined,
+              imageUrl: String(item.imageUrl ?? "").trim() || undefined,
+              icon: String(item.icon ?? "").trim() || undefined,
+              color: String(item.color ?? "").trim() || undefined,
+              background: String(item.background ?? "").trim() || undefined,
+              fontSize: clamp(item.fontSize, 10, 72, 18),
+              fontWeight: clamp(item.fontWeight, 300, 900, 600),
+            }))
+            .filter((item) => Boolean(item.id))
+        : [],
+    };
+  } catch {
+    homeBuilder = { canvasHeight: 1200, elements: [] };
+  }
+
+  let homeSections: MainPageSection[] = [];
+  try {
+    const raw = String(formData.get("home_sections_json") ?? "[]");
+    const parsed = JSON.parse(raw) as MainPageSection[];
+    if (Array.isArray(parsed)) {
+      homeSections = parsed
+        .map((s) => ({
+          key: String(s.key ?? "").trim().toLowerCase(),
+          title: String(s.title ?? "").trim() || undefined,
+          subtitle: String(s.subtitle ?? "").trim() || undefined,
+          ctaLabel: String(s.ctaLabel ?? "").trim() || undefined,
+          ctaUrl: String(s.ctaUrl ?? "").trim() || undefined,
+          enabled: s.enabled !== false,
+          x: clamp(s.x, 0, 2000, 0),
+          y: clamp(s.y, 0, 8000, 0),
+          widthPx: clamp(
+            s.widthPx ?? (s.width === "compact" ? 720 : s.width === "wide" ? 1200 : 1080),
+            320,
+            1280,
+            1080,
+          ),
+          heightPx: clamp(
+            s.heightPx ??
+              (s.height === "small"
+                ? 220
+                : s.height === "medium"
+                  ? 300
+                  : s.height === "large"
+                    ? 380
+                    : 260),
+            140,
+            900,
+            260,
+          ),
+          titleSize: clamp(s.titleSize, 14, 64, 24),
+          subtitleSize: clamp(s.subtitleSize, 12, 40, 16),
+          titleWeight:
+            s.titleWeight === "400" ||
+            s.titleWeight === "500" ||
+            s.titleWeight === "600" ||
+            s.titleWeight === "700" ||
+            s.titleWeight === "800"
+              ? s.titleWeight
+              : "700",
+          subtitleWeight:
+            s.subtitleWeight === "400" ||
+            s.subtitleWeight === "500" ||
+            s.subtitleWeight === "600" ||
+            s.subtitleWeight === "700"
+              ? s.subtitleWeight
+              : "400",
+          titleFont: s.titleFont === "sans" ? "sans" : "display",
+          subtitleFont: s.subtitleFont === "display" ? "display" : "sans",
+        }))
+        .filter((s) => s.key);
+    }
+  } catch {
+    redirect(`${localizedPath("/admin/main-page-constructor", locale)}?error=sections`);
+  }
+
+  const { error } = await service.from("site_settings").upsert(
+    {
+      id: 1,
+      hero_image_url: heroImageUrl,
+      home_intro_title: introTitle,
+      home_intro_body: introBody,
+      home_intro_layout: introLayout,
+      home_sections: homeSections,
+      home_builder: homeBuilder,
+    },
+    { onConflict: "id" },
+  );
+
+  if (error) {
+    console.error("[admin-site:update-constructor]", error);
+    redirect(`${localizedPath("/admin/main-page-constructor", locale)}?error=db`);
+  }
+
+  revalidatePath(`/${locale}`, "page");
+  revalidatePath(`/${locale}/admin/main-page-constructor`, "page");
+  redirect(localizedPath("/admin/main-page-constructor", locale));
 }

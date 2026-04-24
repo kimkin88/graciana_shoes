@@ -38,13 +38,14 @@ const buttonStyles = `
   ${({ theme, $variant = "primary" }) =>
     $variant === "primary"
       ? `
-    background: ${theme.colors.buttonPrimaryBg};
-    color: ${theme.colors.buttonPrimaryText};
-    border-color: ${theme.colors.buttonPrimaryBorder};
-    box-shadow: 0 8px 18px rgb(0 0 0 / 24%);
+    background: ${theme.colors.accent};
+    color: ${theme.colors.text};
+    border-color: ${theme.colors.textMuted};
+    box-shadow: none;
     &:hover:not(:disabled) {
-      background: ${theme.colors.buttonPrimaryHoverBg};
-      border-color: ${theme.colors.buttonPrimaryHoverBg};
+      background: ${theme.colors.text};
+      color: ${theme.colors.surface};
+      border-color: ${theme.colors.text};
     }
   `
       : $variant === "danger"
@@ -55,14 +56,14 @@ const buttonStyles = `
     &:hover:not(:disabled) { filter: brightness(0.95); }
   `
         : `
-    background: ${theme.colors.buttonGhostBg};
-    color: ${theme.colors.buttonGhostText};
-    border-color: ${theme.colors.buttonGhostBorder};
-    box-shadow: 0 6px 14px rgb(0 0 0 / 18%);
+    background: ${theme.colors.accent};
+    color: ${theme.colors.text};
+    border-color: ${theme.colors.textMuted};
+    box-shadow: none;
     &:hover:not(:disabled) {
-      background: ${theme.colors.buttonGhostHoverBg};
-      color: ${theme.colors.buttonGhostHoverText};
-      border-color: ${theme.colors.buttonGhostHoverBg};
+      background: ${theme.colors.text};
+      color: ${theme.colors.surface};
+      border-color: ${theme.colors.text};
     }
   `}
 `;

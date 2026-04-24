@@ -5,9 +5,11 @@ const nextConfig: NextConfig = {
   compiler: {
     styledComponents: true,
   },
-  serverActions: {
-    // Allow admin media uploads larger than default 1 MB.
-    bodySizeLimit: "8mb",
+  experimental: {
+    serverActions: {
+      // Allow admin media uploads larger than default 1 MB.
+      bodySizeLimit: "8mb",
+    },
   },
 };
 

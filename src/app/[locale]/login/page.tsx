@@ -6,6 +6,11 @@ import { localizedPath } from "@/i18n/routing";
 import { login } from "@/app/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Label } from "@/components/ui/Input";
+import styled from "styled-components";
+
+const AuthSubmitButton = styled(Button)`
+  min-width: 140px;
+`;
 
 export default async function LoginPage({
   params,
@@ -41,7 +46,7 @@ export default async function LoginPage({
             autoComplete="current-password"
           />
         </Field>
-        <Button type="submit">{dict.auth.submitLogin}</Button>
+        <AuthSubmitButton type="submit">{dict.auth.submitLogin}</AuthSubmitButton>
       </form>
       <p style={{ marginTop: 16 }}>
         <Link href={localizedPath("/register", locale)}>{dict.auth.needAccount}</Link>

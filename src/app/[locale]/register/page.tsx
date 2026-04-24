@@ -6,6 +6,11 @@ import { localizedPath } from "@/i18n/routing";
 import { register } from "@/app/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Label } from "@/components/ui/Input";
+import styled from "styled-components";
+
+const AuthSubmitButton = styled(Button)`
+  min-width: 140px;
+`;
 
 export default async function RegisterPage({
   params,
@@ -50,7 +55,7 @@ export default async function RegisterPage({
             minLength={6}
           />
         </Field>
-        <Button type="submit">{dict.auth.submitRegister}</Button>
+        <AuthSubmitButton type="submit">{dict.auth.submitRegister}</AuthSubmitButton>
       </form>
       <p style={{ marginTop: 16 }}>
         <Link href={localizedPath("/login", locale)}>{dict.auth.haveAccount}</Link>

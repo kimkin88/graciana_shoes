@@ -106,26 +106,15 @@ const Actions = styled.div`
   }
 `;
 
-const ApplyButton = styled(Button)`
-  min-width: 140px;
-  background: ${({ theme }) => theme.colors.buttonPrimaryBg};
-  color: ${({ theme }) => theme.colors.buttonPrimaryText};
-  border-color: ${({ theme }) => theme.colors.buttonPrimaryBorder};
-  @media (max-width: 700px) {
-    width: 100%;
-    min-width: 0;
-  }
-`;
-
-const ResetButton = styled(Button)`
+const ActionButton = styled(Button)`
   min-width: 120px;
-  background: transparent;
+  background: ${({ theme }) => theme.colors.accent};
   color: ${({ theme }) => theme.colors.text};
   border-color: ${({ theme }) => theme.colors.textMuted};
   box-shadow: none;
   &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.accent};
-    color: ${({ theme }) => theme.colors.text};
+    background: ${({ theme }) => theme.colors.text};
+    color: ${({ theme }) => theme.colors.surface};
     border-color: ${({ theme }) => theme.colors.text};
   }
   @media (max-width: 700px) {
@@ -301,12 +290,12 @@ export function ProductFilters({
         </Field>
       </Row>
       <Actions>
-        <ApplyButton type="button" onClick={apply}>
+        <ActionButton type="button" onClick={apply}>
           {dict.products.apply}
-        </ApplyButton>
-        <ResetButton type="button" onClick={reset}>
+        </ActionButton>
+        <ActionButton type="button" onClick={reset}>
           {dict.products.reset}
-        </ResetButton>
+        </ActionButton>
       </Actions>
     </Panel>
   );
