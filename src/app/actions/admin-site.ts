@@ -287,54 +287,60 @@ export async function updateMainPageConstructor(formData: FormData) {
     const parsed = JSON.parse(raw) as MainPageSection[];
     if (Array.isArray(parsed)) {
       homeSections = parsed
-        .map((s) => ({
-          key: String(s.key ?? "").trim().toLowerCase(),
-          title: String(s.title ?? "").trim() || undefined,
-          subtitle: String(s.subtitle ?? "").trim() || undefined,
-          ctaLabel: String(s.ctaLabel ?? "").trim() || undefined,
-          ctaUrl: String(s.ctaUrl ?? "").trim() || undefined,
-          enabled: s.enabled !== false,
-          x: clamp(s.x, 0, 2000, 0),
-          y: clamp(s.y, 0, 8000, 0),
-          widthPx: clamp(
-            s.widthPx ?? (s.width === "compact" ? 720 : s.width === "wide" ? 1200 : 1080),
-            320,
-            1280,
-            1080,
-          ),
-          heightPx: clamp(
-            s.heightPx ??
-              (s.height === "small"
-                ? 220
-                : s.height === "medium"
-                  ? 300
-                  : s.height === "large"
-                    ? 380
-                    : 260),
-            140,
-            900,
-            260,
-          ),
-          titleSize: clamp(s.titleSize, 14, 64, 24),
-          subtitleSize: clamp(s.subtitleSize, 12, 40, 16),
-          titleWeight:
-            s.titleWeight === "400" ||
-            s.titleWeight === "500" ||
-            s.titleWeight === "600" ||
-            s.titleWeight === "700" ||
-            s.titleWeight === "800"
-              ? s.titleWeight
-              : "700",
-          subtitleWeight:
-            s.subtitleWeight === "400" ||
-            s.subtitleWeight === "500" ||
-            s.subtitleWeight === "600" ||
-            s.subtitleWeight === "700"
-              ? s.subtitleWeight
-              : "400",
-          titleFont: s.titleFont === "sans" ? "sans" : "display",
-          subtitleFont: s.subtitleFont === "display" ? "display" : "sans",
-        }))
+        .map((s): MainPageSection => {
+          const titleFont: "display" | "sans" =
+            s.titleFont === "sans" ? "sans" : "display";
+          const subtitleFont: "display" | "sans" =
+            s.subtitleFont === "display" ? "display" : "sans";
+          return {
+            key: String(s.key ?? "").trim().toLowerCase(),
+            title: String(s.title ?? "").trim() || undefined,
+            subtitle: String(s.subtitle ?? "").trim() || undefined,
+            ctaLabel: String(s.ctaLabel ?? "").trim() || undefined,
+            ctaUrl: String(s.ctaUrl ?? "").trim() || undefined,
+            enabled: s.enabled !== false,
+            x: clamp(s.x, 0, 2000, 0),
+            y: clamp(s.y, 0, 8000, 0),
+            widthPx: clamp(
+              s.widthPx ?? (s.width === "compact" ? 720 : s.width === "wide" ? 1200 : 1080),
+              320,
+              1280,
+              1080,
+            ),
+            heightPx: clamp(
+              s.heightPx ??
+                (s.height === "small"
+                  ? 220
+                  : s.height === "medium"
+                    ? 300
+                    : s.height === "large"
+                      ? 380
+                      : 260),
+              140,
+              900,
+              260,
+            ),
+            titleSize: clamp(s.titleSize, 14, 64, 24),
+            subtitleSize: clamp(s.subtitleSize, 12, 40, 16),
+            titleWeight:
+              s.titleWeight === "400" ||
+              s.titleWeight === "500" ||
+              s.titleWeight === "600" ||
+              s.titleWeight === "700" ||
+              s.titleWeight === "800"
+                ? s.titleWeight
+                : "700",
+            subtitleWeight:
+              s.subtitleWeight === "400" ||
+              s.subtitleWeight === "500" ||
+              s.subtitleWeight === "600" ||
+              s.subtitleWeight === "700"
+                ? s.subtitleWeight
+                : "400",
+            titleFont,
+            subtitleFont,
+          };
+        })
         .filter((s) => s.key);
     }
   } catch {
