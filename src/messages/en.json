@@ -1,0 +1,120 @@
+{
+  "meta": {
+    "title": "Graciana — store",
+    "description": "Modern e-commerce storefront"
+  },
+  "nav": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "cart": "Cart",
+    "account": "Account",
+    "orders": "Orders",
+    "admin": "Admin",
+    "login": "Log in",
+    "register": "Sign up",
+    "logout": "Log out"
+  },
+  "home": {
+    "featured": "Featured products",
+    "viewAll": "View all",
+    "empty": "No products yet. Add some in the admin panel."
+  },
+  "products": {
+    "title": "Catalog",
+    "search": "Search",
+    "category": "Category",
+    "allCategories": "All",
+    "priceMin": "Price from",
+    "priceMax": "to",
+    "apply": "Apply",
+    "reset": "Reset",
+    "noResults": "No results",
+    "addToCart": "Add to cart",
+    "outOfStock": "Out of stock",
+    "from": "from"
+  },
+  "product": {
+    "description": "Description",
+    "stock": "In stock",
+    "related": "You may also like"
+  },
+  "cart": {
+    "title": "Cart",
+    "empty": "Your cart is empty",
+    "continue": "Continue shopping",
+    "checkout": "Checkout",
+    "remove": "Remove",
+    "total": "Total",
+    "each": "ea.",
+    "clearAll": "Clear cart"
+  },
+  "checkout": {
+    "successTitle": "Thank you for your order",
+    "successBody": "We sent a confirmation email. You can review order status under Orders.",
+    "backHome": "Back to home"
+  },
+  "auth": {
+    "loginTitle": "Log in",
+    "registerTitle": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "submitLogin": "Log in",
+    "submitRegister": "Sign up",
+    "needAccount": "Need an account? Register",
+    "haveAccount": "Already have an account? Log in",
+    "error": "Sign-in failed. Check your credentials."
+  },
+  "orders": {
+    "title": "My orders",
+    "empty": "No orders yet",
+    "date": "Date",
+    "status": "Status",
+    "total": "Total",
+    "id": "ID"
+  },
+  "admin": {
+    "title": "Admin",
+    "stats": "Statistics",
+    "products": "Products",
+    "orders": "Orders",
+    "revenue30d": "Revenue (30 days)",
+    "orders30d": "Orders (30 days)",
+    "productCount": "Products in catalog",
+    "addProduct": "Add product",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "nameRu": "Name (RU)",
+    "nameEn": "Name (EN)",
+    "descRu": "Description (RU)",
+    "descEn": "Description (EN)",
+    "slug": "URL slug",
+    "price": "Price (minor units, e.g. cents)",
+    "currency": "Currency",
+    "category": "Category",
+    "stock": "Stock",
+    "featured": "Featured on home",
+    "active": "Active",
+    "imageUrl": "Image URL",
+    "orderList": "All orders",
+    "customer": "Customer",
+    "forbidden": "Access denied"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "language": "Language"
+  },
+  "toast": {
+    "checkoutFailed": "Checkout could not start",
+    "checkoutStock": "Not enough stock — please refresh your cart.",
+    "checkoutGeneric": "Please try again or contact support."
+  },
+  "status": {
+    "paid": "Paid",
+    "pending": "Pending",
+    "cancelled": "Cancelled"
+  }
+}
