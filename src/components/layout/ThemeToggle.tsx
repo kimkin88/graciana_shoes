@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Moon, Sun } from "lucide-react";
 import { useThemeMode } from "@/context/theme-context";
 
-const Toggle = styled(motion.button)<{ $compact?: boolean }>`
+const Toggle = styled.button<{ $compact?: boolean }>`
   box-sizing: border-box;
   width: ${({ $compact }) => ($compact ? "36px" : "40px")};
   height: ${({ $compact }) => ($compact ? "36px" : "40px")};
@@ -19,10 +19,18 @@ const Toggle = styled(motion.button)<{ $compact?: boolean }>`
   cursor: pointer;
   flex: 0 0 auto;
   line-height: 1;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.16s ease;
   &:hover {
-    background: ${({ $compact, theme }) => ($compact ? theme.colors.accent : theme.colors.accent)};
+    background: ${({ theme }) => theme.colors.accent};
     color: ${({ theme }) => theme.colors.text};
+  }
+  &:active {
+    transform: scale(0.94);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:active {
+      transform: none;
+    }
   }
 `;
 
@@ -35,7 +43,6 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
       $compact={compact}
       aria-label={mode === "dark" ? "Switch to light theme" : "Switch to dark theme"}
       onClick={toggleMode}
-      whileTap={reduceMotion ? undefined : { scale: 0.94 }}
       title={mode === "dark" ? "Light mode" : "Dark mode"}
     >
       <AnimatePresence mode="wait" initial={false}>

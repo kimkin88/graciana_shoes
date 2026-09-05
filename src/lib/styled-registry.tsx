@@ -7,7 +7,23 @@
  */
 import React, { useState } from "react";
 import { useServerInsertedHTML } from "next/navigation";
+import isPropValid from "@emotion/is-prop-valid";
 import { ServerStyleSheet, StyleSheetManager } from "styled-components";
+
+/**
+ * Filter props that must not hit the DOM.
+ * - `$…` transient props (styled-components convention)
+ * - known non-DOM noise like `override`
+ * - for native tags, only valid HTML attrs
+ */
+function shouldForwardProp(propName: string, target?: unknown) {
+  if (propName.startsWith("$")) return false;
+  if (propName === "override") return false;
+  if (typeof target === "string") {
+    return isPropValid(propName);
+  }
+  return true;
+}
 
 export default function StyledComponentsRegistry({
   children,
@@ -27,11 +43,11 @@ export default function StyledComponentsRegistry({
   });
 
   if (typeof window !== "undefined") {
-    return <>{children}</>;
+    return <StyleSheetManager shouldForwardProp={shouldForwardProp}>{children}</StyleSheetManager>;
   }
 
   return (
-    <StyleSheetManager sheet={styledComponentsStyleSheet.instance}>
+    <StyleSheetManager sheet={styledComponentsStyleSheet.instance} shouldForwardProp={shouldForwardProp}>
       {children}
     </StyleSheetManager>
   );
