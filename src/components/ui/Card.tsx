@@ -1,20 +1,47 @@
 "use client";
 
+import { Slot } from "@radix-ui/react-slot";
 import styled from "styled-components";
 
-export const Card = styled.article`
+const Root = styled.article`
+  display: grid;
+  min-width: 0;
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.lg};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
   overflow: hidden;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-  &:hover {
-    box-shadow: ${({ theme }) => theme.shadows.md};
-    transform: translateY(-2px);
-  }
 `;
 
-export const CardBody = styled.div`
-  padding: ${({ theme }) => theme.space.md};
+const Media = styled.div`
+  position: relative;
+  background: color-mix(in srgb, ${({ theme }) => theme.colors.text} 5%, ${({ theme }) => theme.colors.surface});
+  overflow: hidden;
 `;
+
+const Body = styled.div`
+  padding: 16px;
+`;
+
+type CardProps = React.ComponentPropsWithoutRef<"article"> & {
+  asChild?: boolean;
+  $plain?: boolean;
+};
+
+const PlainRoot = styled.article`
+  display: grid;
+  height: 100%;
+  min-width: 0;
+  grid-template-rows: auto 1fr;
+  background: transparent;
+  overflow: hidden;
+  border: 0;
+`;
+
+/** Radix Slot-based card. Use `$plain` for borderless product tiles. */
+export function Card({ asChild, $plain, ...props }: CardProps) {
+  if (asChild) return <Slot {...props} />;
+  const Comp = $plain ? PlainRoot : Root;
+  return <Comp {...props} />;
+}
+
+export const CardMedia = Media;
+export const CardBody = Body;

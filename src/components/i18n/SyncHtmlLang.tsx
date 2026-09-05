@@ -1,10 +1,11 @@
 "use client";
 
 import { useLayoutEffect } from "react";
-import type { Locale } from "@/i18n/config";
+import { useI18n } from "@/context/locale-context";
 
-/** Keeps `<html lang>` in sync with the URL locale (root layout defaults to Russian). */
-export function SyncHtmlLang({ locale }: { locale: Locale }) {
+/** Keeps `<html lang>` in sync with the live client locale. */
+export function SyncHtmlLang() {
+  const { locale } = useI18n();
   useLayoutEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);

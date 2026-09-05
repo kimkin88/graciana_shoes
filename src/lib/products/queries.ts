@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProductRow } from "@/types";
+import { categoryAliases } from "@/lib/catalog/categories";
+import { isUuid } from "@/lib/products/slugify";
 
 export type ProductFilters = {
   search?: string;
@@ -40,6 +42,7 @@ export async function fetchProducts(
   let q = supabase
     .from("products")
     .select("*")
+    .eq("active", true)
     .order("created_at", { ascending: false });
 
   if (filters.featuredOnly) {
@@ -47,7 +50,8 @@ export async function fetchProducts(
   }
 
   if (filters.category) {
-    q = q.eq("category", filters.category);
+    const aliases = categoryAliases(filters.category);
+    q = q.in("category", aliases);
   }
   if (filters.color) {
     q = q.contains("colors", [filters.color.toLowerCase()]);
@@ -80,16 +84,37 @@ export async function fetchProductBySlug(
   supabase: SupabaseClient,
   slug: string,
 ): Promise<ProductRow | null> {
-  const { data, error } = await supabase
+  const key = slug.trim();
+  if (!key) return null;
+
+  const bySlug = await supabase
     .from("products")
     .select("*")
-    .eq("slug", slug)
+    .eq("slug", key)
+    .eq("active", true)
     .maybeSingle();
-  if (error) {
-    logProductsQueryError("fetchProductBySlug", error);
+
+  if (bySlug.error) {
+    logProductsQueryError("fetchProductBySlug", bySlug.error);
     return null;
   }
-  return data as ProductRow | null;
+  if (bySlug.data) return bySlug.data as ProductRow;
+
+  // Allow /products/<uuid> when slug was set to the product id.
+  if (!isUuid(key)) return null;
+
+  const byId = await supabase
+    .from("products")
+    .select("*")
+    .eq("id", key)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (byId.error) {
+    logProductsQueryError("fetchProductBySlug", byId.error);
+    return null;
+  }
+  return (byId.data as ProductRow | null) ?? null;
 }
 
 export async function fetchCategories(
@@ -98,6 +123,7 @@ export async function fetchCategories(
   const { data, error } = await supabase
     .from("products")
     .select("category")
+    .eq("active", true)
     .not("category", "is", null);
   if (error) {
     logProductsQueryError("fetchCategories", error);
@@ -113,7 +139,7 @@ export async function fetchCategories(
 export async function fetchProductOptions(
   supabase: SupabaseClient,
 ): Promise<{ colors: string[]; sizes: string[] }> {
-  const { data, error } = await supabase.from("products").select("colors,sizes");
+  const { data, error } = await supabase.from("products").select("colors,sizes").eq("active", true);
   if (error) {
     logProductsQueryError("fetchProductOptions", error);
     return { colors: [], sizes: [] };

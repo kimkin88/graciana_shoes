@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
-/** Returns minimal product fields for cart UI (ids must be public catalog items). */
+const CART_SELECT =
+  "id, slug, name_ru, name_en, price_cents, currency, stock, image_url, image_optimized_path, updated_at, colors, sizes, sku, manufacturer, specs, active";
+
+/** Returns product fields for cart drawer / cart page (includes inactive so UI can show “unavailable”). */
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { ids?: string[] };
@@ -10,21 +13,15 @@ export async function POST(request: Request) {
       return NextResponse.json({});
     }
 
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("products")
-      .select(
-        "id, slug, name_ru, name_en, price_cents, currency, stock, image_url, active",
-      )
-      .in("id", ids)
-      .eq("active", true);
+    const service = createServiceClient();
+    const { data, error } = await service.from("products").select(CART_SELECT).in("id", ids);
 
     if (error) {
       console.error(error);
       return NextResponse.json({ error: "db" }, { status: 500 });
     }
 
-    const map: Record<string, (typeof data)[number]> = {};
+    const map: Record<string, NonNullable<typeof data>[number]> = {};
     for (const row of data ?? []) {
       map[row.id] = row;
     }

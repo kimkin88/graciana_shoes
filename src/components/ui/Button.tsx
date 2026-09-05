@@ -1,51 +1,76 @@
 "use client";
 
 import Link from "next/link";
-import styled, { css } from "styled-components";
+import styled from "styled-components";
 
-const buttonStyles = css<{ $variant?: "primary" | "ghost" | "danger" }>`
+const buttonStyles = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: ${({ theme }) => theme.space.sm};
-  padding: 10px 18px;
-  border-radius: ${({ theme }) => theme.radii.pill};
-  font-size: 0.86rem;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 0;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   border: 1px solid transparent;
   cursor: pointer;
-  opacity: 1;
-  transition: background 0.22s ease, border-color 0.22s ease, opacity 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease, color 0.22s ease;
   line-height: 1;
+`;
 
+export const Button = styled.button<{ $variant?: "primary" | "ghost" | "danger" }>`
+  ${buttonStyles}
+  opacity: 1;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.18s ease;
   &:disabled {
-    opacity: 0.9;
+    opacity: 0.45;
     cursor: not-allowed;
-    filter: grayscale(8%);
   }
-
-  &:not(:disabled):hover {
-    transform: translateY(-1px) scale(1.01);
+  @media (prefers-reduced-motion: reduce) {
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.text};
-    outline-offset: 2px;
-  }
-
   ${({ theme, $variant = "primary" }) =>
-    $variant === "primary"
+    $variant === "danger"
       ? `
-    background: ${theme.colors.accent};
-    color: ${theme.colors.text};
-    border-color: ${theme.colors.textMuted};
-    box-shadow: none;
+    background: ${theme.colors.danger};
+    color: #fff;
+    border-color: ${theme.colors.danger};
+  `
+      : $variant === "ghost"
+        ? `
+    background: transparent;
+    color: ${theme.colors.buttonGhostText};
+    border-color: ${theme.colors.buttonGhostBorder};
     &:hover:not(:disabled) {
-      background: ${theme.colors.text};
-      color: ${theme.colors.surface};
-      border-color: ${theme.colors.text};
+      background: ${theme.colors.buttonGhostHoverBg};
+      color: ${theme.colors.buttonGhostHoverText};
+    }
+  `
+        : `
+    background: ${theme.colors.buttonPrimaryBg};
+    color: ${theme.colors.buttonPrimaryText};
+    border-color: ${theme.colors.buttonPrimaryBorder};
+    &:hover:not(:disabled) {
+      background: ${theme.colors.buttonPrimaryHoverBg};
+      transform: translateY(-1px);
+    }
+  `}
+`;
+
+export const ButtonLink = styled(Link)<{ $variant?: "primary" | "ghost" | "danger" }>`
+  ${buttonStyles}
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.18s ease;
+  ${({ theme, $variant = "primary" }) =>
+    $variant === "ghost"
+      ? `
+    background: transparent;
+    color: ${theme.colors.buttonGhostText};
+    border-color: ${theme.colors.buttonGhostBorder};
+    &:hover {
+      background: ${theme.colors.buttonGhostHoverBg};
+      color: ${theme.colors.buttonGhostHoverText};
+      transform: translateY(-1px);
     }
   `
       : $variant === "danger"
@@ -53,25 +78,24 @@ const buttonStyles = css<{ $variant?: "primary" | "ghost" | "danger" }>`
     background: ${theme.colors.danger};
     color: #fff;
     border-color: ${theme.colors.danger};
-    &:hover:not(:disabled) { filter: brightness(0.95); }
+    &:hover {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
   `
         : `
-    background: ${theme.colors.accent};
-    color: ${theme.colors.text};
-    border-color: ${theme.colors.textMuted};
-    box-shadow: none;
-    &:hover:not(:disabled) {
-      background: ${theme.colors.text};
-      color: ${theme.colors.surface};
-      border-color: ${theme.colors.text};
+    background: ${theme.colors.buttonPrimaryBg};
+    color: ${theme.colors.buttonPrimaryText};
+    border-color: ${theme.colors.buttonPrimaryBorder};
+    &:hover {
+      background: ${theme.colors.buttonPrimaryHoverBg};
+      transform: translateY(-1px);
     }
   `}
-`;
-
-export const Button = styled.button<{ $variant?: "primary" | "ghost" | "danger" }>`
-  ${buttonStyles}
-`;
-
-export const ButtonLink = styled(Link)<{ $variant?: "primary" | "ghost" | "danger" }>`
-  ${buttonStyles}
+  @media (prefers-reduced-motion: reduce) {
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    &:hover {
+      transform: none;
+    }
+  }
 `;

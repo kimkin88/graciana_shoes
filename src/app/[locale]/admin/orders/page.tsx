@@ -4,6 +4,13 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format/money";
 import type { OrderRow } from "@/types";
+import {
+  AdminSectionHead,
+  AdminSectionTitle,
+  AdminTable,
+  AdminTableWrap,
+} from "@/components/admin/AdminButtons";
+import { TableScroll } from "@/components/ui/ScrollArea";
 
 export default async function AdminOrdersPage({
   params,
@@ -26,34 +33,36 @@ export default async function AdminOrdersPage({
   const orders = (data ?? []) as OrderRow[];
 
   return (
-    <div>
-      <h2 style={{ marginTop: 0 }}>{dict.admin.orderList}</h2>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0" }}>
-              <th style={{ padding: "8px 4px" }}>{dict.orders.id}</th>
-              <th>{dict.admin.customer}</th>
-              <th>{dict.orders.date}</th>
-              <th>{dict.orders.status}</th>
-              <th>{dict.orders.total}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "8px 4px", fontFamily: "monospace", fontSize: "0.75rem" }}>
-                  {o.id}
-                </td>
-                <td>{o.customer_email ?? "—"}</td>
-                <td>{new Date(o.created_at).toLocaleString(locale === "ru" ? "ru-RU" : "en-US")}</td>
-                <td>{o.status}</td>
-                <td>{formatMoney(o.total_cents, o.currency, locale)}</td>
+    <div style={{ display: "grid", gap: 18 }}>
+      <AdminSectionHead>
+        <AdminSectionTitle>{dict.admin.orderList}</AdminSectionTitle>
+      </AdminSectionHead>
+      <AdminTableWrap>
+        <TableScroll>
+          <AdminTable>
+            <thead>
+              <tr>
+                <th>{dict.orders.id}</th>
+                <th>{dict.admin.customer}</th>
+                <th>{dict.orders.date}</th>
+                <th>{dict.orders.status}</th>
+                <th>{dict.orders.total}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {orders.map((o) => (
+                <tr key={o.id}>
+                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "0.75rem" }}>{o.id}</td>
+                  <td>{o.customer_email ?? "—"}</td>
+                  <td>{new Date(o.created_at).toLocaleString(locale === "ru" ? "ru-RU" : "en-US")}</td>
+                  <td>{o.status}</td>
+                  <td>{formatMoney(o.total_cents, o.currency, locale)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </AdminTable>
+        </TableScroll>
+      </AdminTableWrap>
     </div>
   );
 }

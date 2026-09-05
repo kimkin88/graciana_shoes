@@ -5,7 +5,10 @@ import Link from "next/link";
 import { localizedPath } from "@/i18n/routing";
 import type { Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/get-dictionary";
-import { formatMoney } from "@/lib/format/money";
+import { useI18nOptional } from "@/context/locale-context";
+import { productCardImage } from "@/lib/products/media";
+import { HorizontalScroll } from "@/components/ui/ScrollArea";
+import { Money } from "@/components/money/Money";
 
 type RecentRow = {
   id: string;
@@ -15,6 +18,8 @@ type RecentRow = {
   price_cents: number;
   currency: string;
   image_url: string | null;
+  image_optimized_path?: string | null;
+  updated_at: string;
 };
 
 const KEY = "graciana-recent-product-ids";
@@ -22,10 +27,14 @@ const KEY = "graciana-recent-product-ids";
 export function RecentlyViewedStory({
   locale,
   dict,
+  title,
 }: {
   locale: Locale;
   dict: Messages;
+  title?: string;
 }) {
+  const i18n = useI18nOptional();
+  const liveLocale = i18n?.locale ?? locale;
   const [items, setItems] = useState<RecentRow[]>([]);
 
   useEffect(() => {
@@ -41,8 +50,7 @@ export function RecentlyViewedStory({
         });
         if (!res.ok) return;
         const map = (await res.json()) as Record<string, RecentRow>;
-        const rows = ids.map((id) => map[id]).filter(Boolean);
-        setItems(rows);
+        setItems(ids.map((id) => map[id]).filter(Boolean));
       } catch {
         // ignore client fetch issues
       }
@@ -53,43 +61,46 @@ export function RecentlyViewedStory({
   if (!items.length) return null;
 
   return (
-    <section style={{ display: "grid", gap: 12 }}>
-      <h2 style={{ margin: 0, fontSize: "1.2rem" }}>{dict.home.recentlyViewed}</h2>
-      <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
+    <section>
+      <h2 className="home-section-title" style={{ marginBottom: 18 }}>{title ?? dict.home.recentlyViewed}</h2>
+      <HorizontalScroll>
         {items.map((p) => (
           <Link
             key={p.id}
-            href={localizedPath(`/products/${p.slug}`, locale)}
-            style={{
-              minWidth: 180,
-              maxWidth: 180,
-              border: "1px solid #d6ccc1",
-              borderRadius: 12,
-              overflow: "hidden",
-              background: "#fff",
-            }}
+            href={localizedPath(`/products/${p.slug}`, liveLocale)}
+            style={{ minWidth: 180, maxWidth: 180, color: "inherit" }}
           >
-            {p.image_url ? (
+            {productCardImage(p) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={p.image_url}
+                src={productCardImage(p) ?? ""}
                 alt=""
                 width={180}
-                height={130}
-                style={{ width: "100%", height: 130, objectFit: "cover", display: "block" }}
+                height={240}
+                loading="lazy"
+                style={{
+                  width: "100%",
+                  height: 240,
+                  objectFit: "contain",
+                  objectPosition: "center",
+                  display: "block",
+                  background: "color-mix(in srgb, var(--page-text-muted, #999) 12%, transparent)",
+                }}
               />
-            ) : null}
-            <div style={{ padding: 10 }}>
-              <div style={{ fontSize: 13, lineHeight: 1.35 }}>
-                {locale === "en" ? p.name_en || p.name_ru : p.name_ru}
+            ) : (
+              <div style={{ height: 240, background: "var(--page-text-muted)" }} />
+            )}
+            <div style={{ paddingTop: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.35 }}>
+                {liveLocale === "en" ? p.name_en || p.name_ru : p.name_ru}
               </div>
-              <div style={{ marginTop: 6, fontWeight: 600, fontSize: 13 }}>
-                {formatMoney(p.price_cents, p.currency, locale)}
+              <div style={{ marginTop: 6, fontSize: 14, fontWeight: 600, color: "var(--page-text)" }}>
+                <Money cents={p.price_cents} currency={p.currency} locale={liveLocale} />
               </div>
             </div>
           </Link>
         ))}
-      </div>
+      </HorizontalScroll>
     </section>
   );
 }

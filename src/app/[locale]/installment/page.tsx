@@ -1,16 +1,9 @@
 import { notFound } from "next/navigation";
 import { InfoPage } from "@/components/content/InfoPage";
-import { isLocale, type Locale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
+import { isLocale } from "@/i18n/config";
 
-export default async function InstallmentPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
-  const locale = raw as Locale;
-  const dict = await getDictionary(locale);
-  return <InfoPage title={dict.info.installmentTitle} body={dict.info.installmentBody} dict={dict} />;
+  return <InfoPage page="installment" />;
 }

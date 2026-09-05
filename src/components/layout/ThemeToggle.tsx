@@ -1,37 +1,55 @@
 "use client";
 
 import styled from "styled-components";
-import { motion, useReducedMotion } from "framer-motion";
-import { MoonIcon, SunIcon } from "@radix-ui/react-icons";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Moon, Sun } from "lucide-react";
 import { useThemeMode } from "@/context/theme-context";
 
-const Toggle = styled(motion.button)`
-  width: 38px;
-  height: 38px;
-  border-radius: ${({ theme }) => theme.radii.pill};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
+const Toggle = styled(motion.button)<{ $compact?: boolean }>`
+  box-sizing: border-box;
+  width: ${({ $compact }) => ($compact ? "36px" : "40px")};
+  height: ${({ $compact }) => ($compact ? "36px" : "40px")};
+  border-radius: ${({ theme }) => theme.radii.md};
+  border: 0;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textMuted};
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  flex: 0 0 auto;
+  line-height: 1;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  &:hover {
+    background: ${({ $compact, theme }) => ($compact ? theme.colors.accent : theme.colors.accent)};
+    color: ${({ theme }) => theme.colors.text};
+  }
 `;
 
-export function ThemeToggle() {
+export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const { mode, toggleMode } = useThemeMode();
   const reduceMotion = useReducedMotion();
   return (
     <Toggle
       type="button"
+      $compact={compact}
       aria-label={mode === "dark" ? "Switch to light theme" : "Switch to dark theme"}
       onClick={toggleMode}
-      whileTap={reduceMotion ? undefined : { scale: 0.95 }}
-      whileHover={reduceMotion ? undefined : { y: -1 }}
-      transition={{ duration: 0.15 }}
+      whileTap={reduceMotion ? undefined : { scale: 0.94 }}
       title={mode === "dark" ? "Light mode" : "Dark mode"}
     >
-      {mode === "dark" ? <SunIcon /> : <MoonIcon />}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={mode}
+          initial={reduceMotion ? false : { opacity: 0, rotate: -40, scale: 0.8 }}
+          animate={{ opacity: 1, rotate: 0, scale: 1 }}
+          exit={reduceMotion ? undefined : { opacity: 0, rotate: 40, scale: 0.8 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          style={{ display: "inline-flex" }}
+        >
+          {mode === "dark" ? <Sun size={16} strokeWidth={1.5} /> : <Moon size={16} strokeWidth={1.5} />}
+        </motion.span>
+      </AnimatePresence>
     </Toggle>
   );
 }

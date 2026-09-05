@@ -20,6 +20,10 @@ type CartContextValue = {
   removeLine: (productId: string) => void;
   clear: () => void;
   totalQuantity: number;
+  quantityOf: (productId: string) => number;
+  drawerOpen: boolean;
+  openDrawer: () => void;
+  closeDrawer: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -50,11 +54,11 @@ function readStorage(): CartLine[] {
   }
 }
 
-/** Client-side cart persisted in localStorage (simple, no extra infra). */
+/** Client-side cart persisted in localStorage + slide-over drawer state. */
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  // Start empty so SSR markup matches the client; hydrate from localStorage after mount.
   const [lines, setLines] = useState<CartLine[]>([]);
   const [ready, setReady] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     /* Hydrate cart after mount — avoids SSR/client HTML mismatch for localStorage. */
@@ -72,6 +76,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       /* ignore quota / private mode */
     }
   }, [lines, ready]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setDrawerOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [drawerOpen]);
 
   const addToCart = useCallback((productId: string, quantity = 1) => {
     setLines((prev) => {
@@ -102,9 +120,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clear = useCallback(() => setLines([]), []);
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   const totalQuantity = useMemo(
     () => lines.reduce((acc, l) => acc + l.quantity, 0),
+    [lines],
+  );
+
+  const quantityOf = useCallback(
+    (productId: string) => lines.find((l) => l.productId === productId)?.quantity ?? 0,
     [lines],
   );
 
@@ -117,13 +142,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeLine,
       clear,
       totalQuantity,
+      quantityOf,
+      drawerOpen,
+      openDrawer,
+      closeDrawer,
     }),
-    [lines, ready, addToCart, setQuantity, removeLine, clear, totalQuantity],
+    [
+      lines,
+      ready,
+      addToCart,
+      setQuantity,
+      removeLine,
+      clear,
+      totalQuantity,
+      quantityOf,
+      drawerOpen,
+      openDrawer,
+      closeDrawer,
+    ],
   );
 
-  return (
-    <CartContext.Provider value={value}>{children}</CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {

@@ -1,10 +1,13 @@
-import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
+import { LocaleProvider } from "@/context/locale-context";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SyncHtmlLang } from "@/components/i18n/SyncHtmlLang";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { StorefrontShell } from "@/components/layout/StorefrontShell";
+import { PageScrollShell } from "@/components/ui/ScrollArea";
 
 export function generateStaticParams() {
   return [{ locale: "ru" }, { locale: "en" }];
@@ -34,24 +37,20 @@ export default async function LocaleLayout({
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale = raw as Locale;
-  const dict = await getDictionary(locale);
+  const [ru, en] = await Promise.all([getDictionary("ru"), getDictionary("en")]);
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <SyncHtmlLang locale={locale} />
-      <SiteHeader locale={locale} />
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-          padding: "12px 12px 36px",
-          width: "100%",
-          flex: 1,
-        }}
-      >
-        {children}
-      </div>
-      <SiteFooter locale={locale} dict={dict} />
-    </div>
+    <LocaleProvider initialLocale={locale} dictionaries={{ ru, en }}>
+      <PageScrollShell>
+        <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" }}>
+          <SyncHtmlLang />
+          <SiteHeader locale={locale} />
+          <StorefrontShell>
+            <main style={{ flex: 1, width: "100%" }}>{children}</main>
+          </StorefrontShell>
+          <SiteFooter />
+        </div>
+      </PageScrollShell>
+    </LocaleProvider>
   );
 }

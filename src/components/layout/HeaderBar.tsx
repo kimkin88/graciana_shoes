@@ -2,250 +2,536 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import {
-  ChatBubbleIcon,
-  Cross1Icon,
-  HamburgerMenuIcon,
-  InstagramLogoIcon,
-  MobileIcon,
-  PaperPlaneIcon,
-} from "@radix-ui/react-icons";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { InstagramLogoIcon } from "@radix-ui/react-icons";
 import {
   BadgePercent,
-  CreditCard,
-  FileText,
-  Home,
+  Heart,
   Info,
+  ListOrdered,
   LogIn,
+  LogOut,
+  Menu,
+  MessageCircle,
   Package,
   Phone,
-  Receipt,
+  Search,
+  Send,
   Settings,
   ShoppingBag,
-  ShoppingCart,
+  Sparkles,
+  Tag,
   Truck,
   UserRoundPlus,
+  X,
 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/get-dictionary";
 import { localizedPath } from "@/i18n/routing";
-import { Button, ButtonLink } from "@/components/ui/Button";
 import { useCart } from "@/context/cart-context";
+import { useFavorites } from "@/context/favorites-context";
+import { useI18nOptional } from "@/context/locale-context";
 import { logout } from "@/app/actions/auth";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { BrandLogo } from "@/components/layout/BrandLogo";
+import { HeaderQuickLinks } from "@/components/layout/HeaderQuickLinks";
+import { CurrencySwitch } from "@/components/layout/CurrencySwitch";
+import { AppScrollArea } from "@/components/ui/ScrollArea";
+import { categoryLabel, STORE_CATEGORIES } from "@/lib/catalog/categories";
 
-const Bar = styled.header`
+const Shell = styled.header`
   position: sticky;
   top: 0;
   z-index: 40;
+  color: ${({ theme }) => theme.colors.text};
+  background: color-mix(in srgb, ${({ theme }) => theme.colors.background} 88%, transparent);
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
-  box-shadow: 0 2px 14px rgb(0 0 0 / 4%);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
 `;
 
-const Inner = styled.div`
-  max-width: 1100px;
+const Top = styled.div`
+  max-width: 1440px;
   margin: 0 auto;
-  padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
-  display: flex;
+  padding: 10px 12px 8px;
+  display: grid;
+  grid-template-columns: minmax(40px, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: ${({ theme }) => theme.space.md};
-  flex-wrap: nowrap;
+  gap: 6px;
   min-width: 0;
-  @media (max-width: 900px) {
-    padding: 8px 12px;
-    gap: 8px;
+  @media (min-width: 760px) {
+    padding: 12px 16px 10px;
+    gap: 10px;
+  }
+  @media (min-width: 1024px) {
+    padding: 16px 32px 12px;
+    gap: 12px;
   }
 `;
 
-const Brand = styled(Link)`
-  font-family: ${({ theme }) => theme.font.display};
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  @media (max-width: 900px) {
-    font-size: 1.12rem;
-    letter-spacing: 0.06em;
-  }
-`;
-
-const Nav = styled.nav`
-  display: flex;
-  gap: ${({ theme }) => theme.space.sm};
-  flex: 1;
-  flex-wrap: nowrap;
+const Social = styled.a`
+  display: none;
   align-items: center;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  min-width: 0;
-  &::-webkit-scrollbar {
-    display: none;
+  gap: 8px;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: ${({ theme }) => theme.colors.textMuted};
+  justify-self: start;
+  transition: color 0.18s ease;
+  &:hover {
+    color: ${({ theme }) => theme.colors.text};
   }
-  @media (max-width: 900px) {
-    display: none;
+  @media (min-width: 900px) {
+    display: inline-flex;
   }
 `;
 
 const Burger = styled.button`
-  width: 38px;
-  height: 38px;
-  border-radius: ${({ theme }) => theme.radii.pill};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: ${({ theme }) => theme.radii.md};
+  background: transparent;
+  color: inherit;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  justify-self: start;
+  transition: background 0.18s ease;
+  &:hover {
+    background: ${({ theme }) => theme.colors.accent};
+  }
+  @media (min-width: 1024px) {
+    display: none;
+  }
 `;
 
-const DrawerOverlay = styled.div<{ $open: boolean }>`
+const BrandWrap = styled.div`
+  justify-self: center;
+  grid-column: 2;
+  min-width: 0;
+  max-width: min(52vw, 280px);
+`;
+
+const Right = styled.div`
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  height: 36px;
+  @media (min-width: 900px) {
+    gap: 4px;
+  }
+  @media (min-width: 1024px) {
+    gap: 6px;
+  }
+`;
+
+const IconCluster = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  height: 36px;
+`;
+
+const LangGroup = styled.div<{ $always?: boolean }>`
+  display: ${({ $always }) => ($always ? "inline-flex" : "none")};
+  align-items: center;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 3px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
+  background: ${({ theme }) => theme.colors.surface};
+  flex: 0 0 auto;
+  @media (min-width: 1024px) {
+    display: inline-flex;
+  }
+`;
+
+const IconLink = styled(Link)`
+  position: relative;
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  border-radius: ${({ theme }) => theme.radii.md};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: ${({ theme }) => theme.colors.textMuted};
+  transition: background 0.18s ease, color 0.18s ease;
+  flex: 0 0 auto;
+  line-height: 1;
+  &:hover {
+    background: ${({ theme }) => theme.colors.accent};
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
+const AccountTrigger = styled(DropdownMenu.Trigger)`
+  position: relative;
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
+  background: ${({ theme }) => theme.colors.textMuted};
+  color: ${({ theme }) => theme.colors.background};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  &:hover,
+  &[data-state="open"] {
+    background: ${({ theme }) => theme.colors.text};
+    border-color: ${({ theme }) => theme.colors.text};
+    color: ${({ theme }) => theme.colors.background};
+  }
+`;
+
+const OnlineDot = styled.span`
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.success};
+  border: 1.5px solid ${({ theme }) => theme.colors.background};
+  pointer-events: none;
+`;
+
+const GuestLogin = styled(Link)`
+  position: relative;
+  box-sizing: border-box;
+  height: 36px;
+  width: 36px;
+  padding: 0;
+  border-radius: ${({ theme }) => theme.radii.md};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  flex: 0 0 auto;
+  line-height: 1;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  span {
+    display: none;
+  }
+  &:hover {
+    background: ${({ theme }) => theme.colors.accent};
+    border-color: ${({ theme }) => theme.colors.textMuted};
+    color: ${({ theme }) => theme.colors.text};
+  }
+  @media (min-width: 1100px) {
+    width: auto;
+    padding: 0 12px;
+    gap: 6px;
+    span {
+      display: inline;
+    }
+  }
+`;
+
+const AccountMenu = styled(DropdownMenu.Content)`
+  min-width: 220px;
+  z-index: 70;
+  padding: 6px 0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
+  box-shadow: 0 12px 28px rgb(0 0 0 / 8%);
+`;
+
+const AccountLink = styled(Link)`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  color: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  outline: none;
+  text-decoration: none;
+  &:hover,
+  &[data-highlighted] {
+    background: ${({ theme }) => theme.colors.accent};
+  }
+`;
+
+const AccountButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  outline: none;
+  text-align: left;
+  &:hover,
+  &[data-highlighted] {
+    background: ${({ theme }) => theme.colors.accent};
+  }
+`;
+
+const AccountHead = styled.div`
+  padding: 10px 14px 12px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  display: grid;
+  gap: 4px;
+`;
+
+const AccountStatus = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.success};
+`;
+
+const AccountEmail = styled.div`
+  font-size: 0.78rem;
+  color: ${({ theme }) => theme.colors.text};
+  word-break: break-all;
+  line-height: 1.35;
+`;
+
+const RolePill = styled.span`
+  width: fit-content;
+  margin-top: 2px;
+  padding: 3px 7px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.textMuted};
+`;
+
+const IconBtn = styled.button`
+  position: relative;
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: ${({ theme }) => theme.radii.md};
+  background: transparent;
+  color: ${({ theme }) => theme.colors.textMuted};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  line-height: 1;
+  transition: background 0.18s ease, color 0.18s ease;
+  &:hover {
+    background: ${({ theme }) => theme.colors.accent};
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
+const DesktopOnly = styled.span`
+  display: none;
+  @media (min-width: 1024px) {
+    display: contents;
+  }
+`;
+
+const Badge = styled.span`
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.colors.textMuted};
+  color: ${({ theme }) => theme.colors.background};
+  font-size: 0.56rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+`;
+
+const CatalogBtn = styled(Link)`
+  display: none;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  line-height: 1;
+  flex: 0 0 auto;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  &:hover {
+    background: ${({ theme }) => theme.colors.accent};
+    color: ${({ theme }) => theme.colors.text};
+    border-color: ${({ theme }) => theme.colors.textMuted};
+  }
+  @media (min-width: 1024px) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+`;
+
+const LangBtn = styled.button<{ $active?: boolean }>`
+  border: 0;
+  border-radius: 2px;
+  height: 100%;
+  min-width: 30px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.textMuted : "transparent")};
+  color: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.textMuted)};
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 0 8px;
+  font-weight: 600;
+  line-height: 1;
+  transition: background 0.18s ease, color 0.18s ease;
+  &:hover {
+    color: ${({ $active, theme }) => ($active ? theme.colors.background : theme.colors.text)};
+  }
+`;
+
+const Overlay = styled.div<{ $open: boolean }>`
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 42%);
   opacity: ${({ $open }) => ($open ? 1 : 0)};
   pointer-events: ${({ $open }) => ($open ? "auto" : "none")};
-  transition: opacity 0.2s ease;
+  transition: opacity 0.28s ease;
   z-index: 70;
 `;
 
-const Drawer = styled.aside<{ $open: boolean }>`
+const Panel = styled.aside<{ $open: boolean }>`
   position: fixed;
   top: 0;
   left: 0;
-  width: min(360px, 88vw);
-  height: 100vh;
-  background: ${({ theme }) => theme.colors.surface};
-  border-right: 1px solid ${({ theme }) => theme.colors.border};
+  width: min(400px, 100%);
+  height: 100dvh;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
   transform: translateX(${({ $open }) => ($open ? "0" : "-102%")});
-  transition: transform 0.23s ease;
+  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 80;
   display: grid;
-  grid-template-rows: auto 1fr;
-  @media (max-width: 520px) {
-    width: 92vw;
+  grid-template-rows: auto 1fr auto;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+`;
+
+const PanelHead = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+const PanelTitle = styled.p`
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+`;
+
+const PanelLink = styled(Link)`
+  display: block;
+  padding: 12px 0;
+  font-size: 0.92rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: inherit;
+  &:hover {
+    opacity: 0.62;
   }
 `;
 
-const DrawerLink = styled(Link)<{ $noBorder?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 0;
-  border-bottom: ${({ $noBorder, theme }) =>
-    $noBorder ? "none" : `1px solid ${theme.colors.border}`};
-  font-size: 0.85rem;
+const PanelSection = styled.p`
+  margin: 18px 0 6px;
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: ${({ theme }) => theme.colors.textMuted};
+`;
+
+const GhostBtn = styled.button`
+  background: none;
+  border: 0;
+  padding: 9px 0;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  white-space: nowrap;
-  svg {
-    flex-shrink: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  &:hover {
+    opacity: 0.62;
   }
 `;
 
 const SocialLink = styled.a`
-  width: 38px;
-  height: 38px;
-  border-radius: ${({ theme }) => theme.radii.pill};
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const NavLink = styled(Link)<{ $active?: boolean }>`
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: ${({ $active }) => ($active ? 700 : 500)};
-  white-space: nowrap;
-  padding: 8px 10px;
-  border-radius: ${({ theme }) => theme.radii.pill};
-  transition: background 0.2s ease, color 0.2s ease;
+  border-radius: ${({ theme }) => theme.radii.md};
+  color: inherit;
+  transition: background 0.18s ease, color 0.18s ease;
   &:hover {
-    color: ${({ theme }) => theme.colors.primary};
-    background: ${({ theme }) => theme.colors.accent};
-  }
-`;
-
-const Right = styled.div`
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space.sm};
-  flex-shrink: 0;
-  @media (max-width: 900px) {
-    margin-left: auto;
-    gap: 6px;
-  }
-`;
-
-const HeaderActionButton = styled(Button)`
-  background: ${({ theme }) => theme.colors.accent};
-  color: ${({ theme }) => theme.colors.text};
-  border-color: ${({ theme }) => theme.colors.textMuted};
-  box-shadow: none;
-  &:hover:not(:disabled) {
     background: ${({ theme }) => theme.colors.text};
-    color: ${({ theme }) => theme.colors.surface};
-    border-color: ${({ theme }) => theme.colors.text};
-  }
-  @media (max-width: 900px) {
-    display: none;
+    color: ${({ theme }) => theme.colors.background};
   }
 `;
 
-const HeaderActionLink = styled(ButtonLink)`
-  background: ${({ theme }) => theme.colors.accent};
-  color: ${({ theme }) => theme.colors.text};
-  border-color: ${({ theme }) => theme.colors.textMuted};
-  box-shadow: none;
-  &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.text};
-    color: ${({ theme }) => theme.colors.surface};
-    border-color: ${({ theme }) => theme.colors.text};
-  }
-  @media (max-width: 900px) {
-    display: none;
-  }
-`;
-
-const Badge = styled.span`
-  display: inline-flex;
-  min-width: 1.25rem;
-  height: 1.25rem;
-  padding: 0 5px;
-  align-items: center;
-  justify-content: center;
-  border-radius: ${({ theme }) => theme.radii.pill};
-  background: ${({ theme }) => theme.colors.primary};
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 600;
-`;
-
-const LangSelect = styled.select`
-  font-size: 0.85rem;
-  padding: 6px 10px;
-  border-radius: ${({ theme }) => theme.radii.sm};
-  border: 1px solid ${({ theme }) => theme.colors.textMuted};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: 600;
-  @media (max-width: 900px) {
-    font-size: 0.82rem;
-    padding: 6px 8px;
-    max-width: 100%;
-  }
+const PanelFoot = styled.div`
+  padding: 16px 24px 22px;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  display: grid;
+  gap: 12px;
 `;
 
 type Props = {
@@ -255,253 +541,339 @@ type Props = {
   isAdmin: boolean;
 };
 
-/** Main navigation — client so cart badge and language switch stay interactive. */
-export function HeaderBar({ locale, dict, userEmail, isAdmin }: Props) {
+const iconStroke = 1.5;
+
+export function HeaderBar({ locale: localeProp, dict: dictProp, userEmail, isAdmin }: Props) {
+  const i18n = useI18nOptional();
+  const locale = i18n?.locale ?? localeProp;
+  const dict = i18n?.dict ?? dictProp;
   const pathname = usePathname() || "/";
-  const { totalQuantity, ready } = useCart();
+  const { totalQuantity, ready, openDrawer } = useCart();
+  const { ids: favIds, ready: favReady } = useFavorites();
   const [menuOpen, setMenuOpen] = useState(false);
+  const shellRef = useRef<HTMLElement>(null);
+  const navCategories = STORE_CATEGORIES;
+
+  useEffect(() => {
+    const el = shellRef.current;
+    if (!el) return;
+    const sync = () => {
+      document.documentElement.style.setProperty("--header-h", `${el.offsetHeight}px`);
+    };
+    sync();
+    const ro = new ResizeObserver(sync);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   function switchLocale(next: Locale) {
-    const rest =
-      pathname.replace(/^\/(en|ru)(?=\/|$)/, "") || "/";
+    if (i18n) {
+      i18n.setLocale(next);
+      return;
+    }
+    const rest = pathname.replace(/^\/(en|ru)(?=\/|$)/, "") || "/";
     const path = rest === "/" ? "" : rest;
     window.location.href = `/${next}${path}`;
   }
 
-  const mk = (path: string) => localizedPath(path, locale);
-  const active = (p: string) =>
-    pathname === mk(p) || pathname.startsWith(`${mk(p)}/`);
+  const mk = (path: string) => (i18n ? i18n.path(path) : localizedPath(path, locale));
+  const close = () => setMenuOpen(false);
+  const cartCount = ready ? totalQuantity : 0;
+  const favCount = favReady ? favIds.length : 0;
+
+  const quickLinks = [
+    {
+      href: mk("/delivery-payment"),
+      label: dict.nav.delivery,
+      icon: Truck,
+    },
+    {
+      href: mk("/products"),
+      label: dict.home.newIn,
+      icon: Sparkles,
+    },
+    {
+      href: mk("/about"),
+      label: dict.nav.about,
+      icon: Info,
+    },
+    {
+      href: mk("/how-to-order"),
+      label: dict.nav.howToOrder,
+      icon: ListOrdered,
+    },
+    {
+      href: mk("/installment"),
+      label: dict.nav.installment,
+      icon: BadgePercent,
+      tone: "installment" as const,
+    },
+    {
+      href: mk("/promotions"),
+      label: dict.nav.promotions,
+      icon: Tag,
+      tone: "promo" as const,
+    },
+  ];
 
   return (
-    <Bar>
-      <div
-        style={{
-          textAlign: "center",
-          fontSize: "0.74rem",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          padding: "7px 12px",
-          background: "var(--promo-bg, #1f1a17)",
-          color: "var(--promo-text, #fff)",
-        }}
-      >
-        {dict.common.freeShipping}
-      </div>
-      <Inner>
-        <Burger type="button" aria-label={dict.common.openMenu} onClick={() => setMenuOpen(true)}>
-          <HamburgerMenuIcon />
+    <Shell ref={shellRef}>
+      <Top>
+        <Burger type="button" aria-label={dict.common.openMenu} aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}>
+          <Menu size={18} strokeWidth={iconStroke} />
         </Burger>
-        <Brand href={mk("/")}>Graciana</Brand>
-        <Nav>
-          <NavLink href={mk("/")} $active={active("/")}>
-            {dict.nav.home}
-          </NavLink>
-          <NavLink href={mk("/products")} $active={active("/products")}>
-            {dict.nav.catalog}
-          </NavLink>
-          <NavLink href={mk("/delivery-payment")} $active={active("/delivery-payment")}>
-            {dict.nav.delivery}
-          </NavLink>
-          <NavLink href={mk("/contacts")} $active={active("/contacts")}>
-            {dict.nav.contacts}
-          </NavLink>
-          <NavLink href={mk("/cart")} $active={active("/cart")}>
-            {dict.nav.cart}
-            {ready && totalQuantity > 0 ? <Badge>{totalQuantity}</Badge> : null}
-          </NavLink>
-          {userEmail ? (
-            <>
-              <NavLink
-                href={mk("/account/orders")}
-                $active={active("/account/orders")}
-              >
-                {dict.nav.orders}
-              </NavLink>
-              {isAdmin ? (
-                <NavLink href={mk("/admin")} $active={active("/admin")}>
-                  {dict.nav.admin}
-                </NavLink>
-              ) : null}
-            </>
-          ) : null}
-        </Nav>
+        <Social href="https://t.me/graciana_shoes_by" target="_blank" rel="noreferrer">
+          <Send size={13} strokeWidth={iconStroke} />
+          @graciana_shoes_by
+        </Social>
+        <BrandWrap>
+          <BrandLogo href={mk("/")} withSub sub={dict.nav.brandSub} />
+        </BrandWrap>
         <Right>
-          <ThemeToggle />
+          <IconCluster>
+            <DesktopOnly>
+              <IconLink href={mk("/products")} aria-label={dict.products.search}>
+                <Search size={18} strokeWidth={iconStroke} />
+              </IconLink>
+            </DesktopOnly>
+            <IconLink href={mk("/products")} aria-label={dict.nav.favorites}>
+              <Heart size={18} strokeWidth={iconStroke} />
+              <Badge>{favCount}</Badge>
+            </IconLink>
+            <IconBtn type="button" aria-label={dict.nav.cart} onClick={openDrawer}>
+              <ShoppingBag size={18} strokeWidth={iconStroke} />
+              <Badge>{cartCount}</Badge>
+            </IconBtn>
+            <DesktopOnly>
+              <ThemeToggle compact />
+            </DesktopOnly>
+          </IconCluster>
+          <LangGroup>
+            <LangBtn type="button" $active={locale === "ru"} onClick={() => switchLocale("ru")}>
+              RU
+            </LangBtn>
+            <LangBtn type="button" $active={locale === "en"} onClick={() => switchLocale("en")}>
+              EN
+            </LangBtn>
+          </LangGroup>
+          <CatalogBtn href={mk("/products")}>{dict.nav.catalogPlus}</CatalogBtn>
           {userEmail ? (
-            <form action={logout}>
-              <input type="hidden" name="locale" value={locale} />
-              <HeaderActionButton type="submit">
-                {dict.nav.logout}
-              </HeaderActionButton>
-            </form>
+            <DropdownMenu.Root modal={false}>
+              <AccountTrigger
+                aria-label={`${dict.nav.signedIn}: ${userEmail}`}
+                title={`${dict.nav.signedInAs} ${userEmail}`}
+              >
+                {userEmail.slice(0, 1)}
+                <OnlineDot aria-hidden />
+              </AccountTrigger>
+              <DropdownMenu.Portal>
+                <AccountMenu align="end" sideOffset={8}>
+                  <AccountHead>
+                    <AccountStatus>
+                      <span
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: 999,
+                          background: "currentColor",
+                          display: "inline-block",
+                        }}
+                      />
+                      {dict.nav.signedIn}
+                    </AccountStatus>
+                    <AccountEmail>{userEmail}</AccountEmail>
+                    {isAdmin ? <RolePill>{dict.nav.admin}</RolePill> : null}
+                  </AccountHead>
+                  <DropdownMenu.Item asChild>
+                    <AccountLink href={mk("/account/orders")}>
+                      <Package size={14} strokeWidth={iconStroke} />
+                      {dict.nav.orders}
+                    </AccountLink>
+                  </DropdownMenu.Item>
+                  {isAdmin ? (
+                    <DropdownMenu.Item asChild>
+                      <AccountLink href={mk("/admin")}>
+                        <Settings size={14} strokeWidth={iconStroke} />
+                        {dict.nav.admin}
+                      </AccountLink>
+                    </DropdownMenu.Item>
+                  ) : null}
+                  <form action={logout} style={{ margin: 0 }}>
+                    <input type="hidden" name="locale" value={locale} />
+                    <AccountButton type="submit">
+                      <LogOut size={14} strokeWidth={iconStroke} />
+                      {dict.nav.logout}
+                    </AccountButton>
+                  </form>
+                </AccountMenu>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
           ) : (
-            <>
-              <HeaderActionLink href={mk("/login")}>
-                {dict.nav.login}
-              </HeaderActionLink>
-              <HeaderActionLink href={mk("/register")}>
-                {dict.nav.register}
-              </HeaderActionLink>
-            </>
+            <GuestLogin href={mk("/login")} aria-label={dict.nav.login} title={dict.nav.login}>
+              <LogIn size={15} strokeWidth={iconStroke} />
+              <span>{dict.nav.signIn}</span>
+            </GuestLogin>
           )}
         </Right>
-      </Inner>
-      <DrawerOverlay $open={menuOpen} onClick={() => setMenuOpen(false)} />
-      <Drawer $open={menuOpen} aria-hidden={!menuOpen}>
-        <div
-          style={{
-            height: 56,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0 14px",
-            borderBottom: "1px solid #d9cec3",
-          }}
-        >
-          <strong style={{ fontSize: "0.88rem", letterSpacing: "0.08em" }}>{dict.common.menu}</strong>
-          <Burger type="button" aria-label={dict.common.closeMenu} onClick={() => setMenuOpen(false)}>
-            <Cross1Icon />
-          </Burger>
-        </div>
-        <div style={{ padding: "10px 16px 24px", overflowY: "auto" }}>
-          <div style={{ paddingBottom: 10, marginBottom: 6, borderBottom: "1px solid #d9cec3" }}>
-            <label style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: "0.76rem", letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--page-text, inherit)" }}>
-                {dict.common.language}
-              </span>
-              <LangSelect
-                aria-label={dict.common.language}
-                value={locale}
-                onChange={(e) => switchLocale(e.target.value as Locale)}
-              >
-                <option value="ru">Русский</option>
-                <option value="en">English</option>
-              </LangSelect>
-            </label>
-          </div>
-          <DrawerLink href={mk("/")} onClick={() => setMenuOpen(false)}>
-            <Home size={16} />
-            {dict.nav.home}
-          </DrawerLink>
-          <DrawerLink href={mk("/products")} onClick={() => setMenuOpen(false)}>
-            <ShoppingBag size={16} />
+      </Top>
+
+      <HeaderQuickLinks items={quickLinks} ariaLabel={dict.nav.catalog} />
+
+      <Overlay $open={menuOpen} onClick={close} />
+      <Panel $open={menuOpen} aria-hidden={!menuOpen}>
+        <PanelHead>
+          <PanelTitle>{dict.nav.catalogPlus}</PanelTitle>
+          <IconBtn type="button" aria-label={dict.common.closeMenu} onClick={close}>
+            <X size={18} strokeWidth={iconStroke} />
+          </IconBtn>
+        </PanelHead>
+        <AppScrollArea style={{ height: "100%" }} viewportStyle={{ padding: "8px 24px 28px" }}>
+          <PanelLink href={mk("/products")} onClick={close}>
             {dict.nav.catalog}
-          </DrawerLink>
-          <DrawerLink href={mk("/delivery-payment")} onClick={() => setMenuOpen(false)}>
-            <Truck size={16} />
-            {dict.nav.delivery}
-          </DrawerLink>
-          <DrawerLink href={mk("/returns-exchange")} onClick={() => setMenuOpen(false)}>
-            <Receipt size={16} />
-            {dict.nav.returns}
-          </DrawerLink>
-          <DrawerLink href={mk("/how-to-order")} onClick={() => setMenuOpen(false)}>
-            <FileText size={16} />
+          </PanelLink>
+          <PanelSection>{dict.nav.categories}</PanelSection>
+          {navCategories.map((item) => (
+            <PanelLink
+              key={item.key}
+              href={`${mk("/products")}?category=${encodeURIComponent(item.key)}`}
+              onClick={close}
+            >
+              {categoryLabel(item.key, locale)}
+            </PanelLink>
+          ))}
+          <PanelSection>{dict.info.customerTitle}</PanelSection>
+          <PanelLink href={mk("/how-to-order")} onClick={close}>
             {dict.nav.howToOrder}
-          </DrawerLink>
-          <DrawerLink href={mk("/installment")} onClick={() => setMenuOpen(false)}>
-            <CreditCard size={16} />
+          </PanelLink>
+          <PanelLink href={mk("/delivery-payment")} onClick={close}>
+            {dict.nav.delivery}
+          </PanelLink>
+          <PanelLink href={mk("/returns-exchange")} onClick={close}>
+            {dict.nav.returns}
+          </PanelLink>
+          <PanelLink href={mk("/installment")} onClick={close}>
             {dict.nav.installment}
-          </DrawerLink>
-          <DrawerLink href={mk("/promotions")} onClick={() => setMenuOpen(false)}>
-            <BadgePercent size={16} />
+          </PanelLink>
+          <PanelLink href={mk("/promotions")} onClick={close}>
             {dict.nav.promotions}
-          </DrawerLink>
-          <DrawerLink href={mk("/about")} onClick={() => setMenuOpen(false)}>
-            <Info size={16} />
+          </PanelLink>
+          <PanelLink href={mk("/about")} onClick={close}>
             {dict.nav.about}
-          </DrawerLink>
-          <DrawerLink href={mk("/contacts")} onClick={() => setMenuOpen(false)}>
-            <Phone size={16} />
+          </PanelLink>
+          <PanelLink href={mk("/contacts")} onClick={close}>
             {dict.nav.contacts}
-          </DrawerLink>
-          <DrawerLink href={mk("/cart")} onClick={() => setMenuOpen(false)}>
-            <ShoppingCart size={16} />
+          </PanelLink>
+          <PanelSection>{dict.nav.account}</PanelSection>
+          <PanelLink href={mk("/products")} onClick={close}>
+            {dict.nav.favorites}
+          </PanelLink>
+          <PanelLink
+            href={mk("/cart")}
+            onClick={(e) => {
+              e.preventDefault();
+              close();
+              openDrawer();
+            }}
+          >
             {dict.nav.cart}
-          </DrawerLink>
+          </PanelLink>
           {userEmail ? (
             <>
-              <DrawerLink href={mk("/account/orders")} onClick={() => setMenuOpen(false)}>
-                <Package size={16} />
-                {dict.nav.orders}
-              </DrawerLink>
+              <div style={{ padding: "8px 0 4px", fontSize: "0.78rem", opacity: 0.72 }}>
+                {dict.nav.signedInAs}
+                <div style={{ marginTop: 4, color: "inherit", opacity: 1, wordBreak: "break-all" }}>{userEmail}</div>
+                {isAdmin ? (
+                  <div style={{ marginTop: 6, fontSize: "0.62rem", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                    {dict.nav.admin}
+                  </div>
+                ) : null}
+              </div>
+              <PanelLink href={mk("/account/orders")} onClick={close}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  <Package size={14} strokeWidth={iconStroke} /> {dict.nav.orders}
+                </span>
+              </PanelLink>
               {isAdmin ? (
-                <DrawerLink $noBorder href={mk("/admin")} onClick={() => setMenuOpen(false)}>
-                  <Settings size={16} />
-                  {dict.nav.admin}
-                </DrawerLink>
+                <PanelLink href={mk("/admin")} onClick={close}>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                    <Settings size={14} strokeWidth={iconStroke} /> {dict.nav.admin}
+                  </span>
+                </PanelLink>
               ) : null}
+              <form action={logout}>
+                <input type="hidden" name="locale" value={locale} />
+                <GhostBtn type="submit">{dict.nav.logout}</GhostBtn>
+              </form>
             </>
           ) : (
             <>
-              <DrawerLink href={mk("/login")} onClick={() => setMenuOpen(false)}>
-                <LogIn size={16} />
-                {dict.nav.login}
-              </DrawerLink>
-              <DrawerLink $noBorder href={mk("/register")} onClick={() => setMenuOpen(false)}>
-                <UserRoundPlus size={16} />
-                {dict.nav.register}
-              </DrawerLink>
+              <PanelLink href={mk("/login")} onClick={close}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  <LogIn size={14} strokeWidth={iconStroke} /> {dict.nav.signIn}
+                </span>
+              </PanelLink>
+              <PanelLink href={mk("/register")} onClick={close}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                  <UserRoundPlus size={14} strokeWidth={iconStroke} /> {dict.nav.register}
+                </span>
+              </PanelLink>
             </>
           )}
-          <div
-            style={{
-              marginTop: 16,
-              padding: "12px 0 0",
-              borderTop: "1px solid #d9cec3",
-              color: "var(--page-text, inherit)",
-              display: "grid",
-              gap: 8,
-              fontSize: "0.82rem",
-              lineHeight: 1.45,
-            }}
-          >
-            <strong style={{ color: "var(--page-heading, inherit)", letterSpacing: "0.04em" }}>{dict.info.customerTitle}</strong>
+        </AppScrollArea>
+        <PanelFoot>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <LangGroup $always>
+              <LangBtn type="button" $active={locale === "ru"} onClick={() => switchLocale("ru")}>
+                RU
+              </LangBtn>
+              <LangBtn type="button" $active={locale === "en"} onClick={() => switchLocale("en")}>
+                EN
+              </LangBtn>
+            </LangGroup>
+            <ThemeToggle compact />
+            <CurrencySwitch locale={locale} variant="pills" />
+          </div>
+          <div style={{ fontSize: "0.8rem", color: "var(--page-text-muted)" }}>
             <div>{dict.info.phones.join(" / ")}</div>
             <div>{dict.info.email}</div>
-            <div>{dict.info.workHours}</div>
-            <strong style={{ marginTop: 4, color: "var(--page-heading, inherit)", letterSpacing: "0.04em" }}>{dict.common.socialLinks}</strong>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <SocialLink
-                href="https://www.instagram.com/graciana_shoes_by/"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Instagram"
-                title="Instagram"
-              >
-                <InstagramLogoIcon width={18} height={18} />
-              </SocialLink>
-              <SocialLink
-                href="https://api.whatsapp.com/send/?phone=375297460114&text&type=phone_number&app_absent=0"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="WhatsApp"
-                title="WhatsApp"
-              >
-                <ChatBubbleIcon width={18} height={18} />
-              </SocialLink>
-              <SocialLink
-                href="https://t.me/graciana_shoes_by"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Telegram"
-                title="Telegram"
-              >
-                <PaperPlaneIcon width={18} height={18} />
-              </SocialLink>
-              <SocialLink
-                href="viber://chat?number=%2B375297460114"
-                aria-label="Viber"
-                title="Viber"
-              >
-                <MobileIcon width={18} height={18} />
-              </SocialLink>
-            </div>
-            <strong style={{ marginTop: 4, color: "var(--page-heading, inherit)", letterSpacing: "0.04em" }}>{dict.info.legalTitle}</strong>
-            <div style={{ whiteSpace: "pre-wrap" }}>{dict.info.legal}</div>
           </div>
-        </div>
-      </Drawer>
-    </Bar>
+          <div style={{ display: "flex", gap: 8 }}>
+            <SocialLink href="https://www.instagram.com/graciana_shoes_by/" target="_blank" rel="noreferrer" aria-label="Instagram">
+              <InstagramLogoIcon width={16} height={16} />
+            </SocialLink>
+            <SocialLink
+              href="https://api.whatsapp.com/send/?phone=375297460114&text&type=phone_number&app_absent=0"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="WhatsApp"
+            >
+              <MessageCircle size={16} strokeWidth={iconStroke} />
+            </SocialLink>
+            <SocialLink href="https://t.me/graciana_shoes_by" target="_blank" rel="noreferrer" aria-label="Telegram">
+              <Send size={16} strokeWidth={iconStroke} />
+            </SocialLink>
+            <SocialLink href="viber://chat?number=%2B375297460114" aria-label="Viber">
+              <Phone size={16} strokeWidth={iconStroke} />
+            </SocialLink>
+          </div>
+        </PanelFoot>
+      </Panel>
+    </Shell>
   );
 }

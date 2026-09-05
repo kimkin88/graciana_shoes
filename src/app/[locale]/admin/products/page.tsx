@@ -7,7 +7,15 @@ import { deleteProduct } from "@/app/actions/admin-products";
 import { formatMoney } from "@/lib/format/money";
 import { productTitle } from "@/lib/products/display";
 import type { ProductRow } from "@/types";
-import { AdminButton, AdminButtonLink } from "@/components/admin/AdminButtons";
+import {
+  AdminButton,
+  AdminButtonLink,
+  AdminSectionHead,
+  AdminSectionTitle,
+  AdminTable,
+  AdminTableWrap,
+} from "@/components/admin/AdminButtons";
+import { TableScroll } from "@/components/ui/ScrollArea";
 import { Trash2 } from "lucide-react";
 
 export default async function AdminProductsPage({
@@ -30,63 +38,71 @@ export default async function AdminProductsPage({
   const products = (data ?? []) as ProductRow[];
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <h2 style={{ margin: 0 }}>{dict.admin.products}</h2>
+    <div style={{ display: "grid", gap: 18 }}>
+      <AdminSectionHead>
+        <AdminSectionTitle>{dict.admin.products}</AdminSectionTitle>
         <AdminButtonLink href={localizedPath("/admin/products/new", locale)}>
           {dict.admin.addProduct}
         </AdminButtonLink>
-      </div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-          <thead>
-            <tr style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0" }}>
-              <th style={{ padding: "8px 4px" }}>{dict.admin.nameRu}</th>
-              <th>{dict.admin.slug}</th>
-              <th>{dict.admin.price}</th>
-              <th>{dict.admin.stock}</th>
-              <th>{dict.admin.active}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => (
-              <tr key={p.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "8px 4px" }}>{productTitle(p, locale)}</td>
-                <td style={{ fontFamily: "monospace", fontSize: "0.8rem" }}>{p.slug}</td>
-                <td>{formatMoney(p.price_cents, p.currency, locale)}</td>
-                <td>{p.stock}</td>
-                <td>{p.active ? "✓" : "—"}</td>
-                <td style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <AdminButtonLink
-                    href={localizedPath(`/admin/products/${p.id}/edit`, locale)}
-                    $variant="ghost"
-                  >
-                    {dict.admin.edit}
-                  </AdminButtonLink>
-                  <form action={deleteProduct}>
-                    <input type="hidden" name="locale" value={locale} />
-                    <input type="hidden" name="id" value={p.id} />
-                    <AdminButton
-                      type="submit"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                        paddingInline: 14,
-                        color: "#9f2f2f",
-                      }}
-                    >
-                      <Trash2 size={14} />
-                      {dict.admin.delete}
-                    </AdminButton>
-                  </form>
-                </td>
+      </AdminSectionHead>
+      <AdminTableWrap>
+        <TableScroll>
+          <AdminTable>
+            <thead>
+              <tr>
+                <th>{dict.admin.nameRu}</th>
+                <th>{dict.admin.slug}</th>
+                <th>{dict.admin.price}</th>
+                <th>{dict.admin.stock}</th>
+                <th>{dict.admin.active}</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {products.map((p) => (
+                <tr key={p.id}>
+                  <td>{productTitle(p, locale)}</td>
+                  <td style={{ fontFamily: "var(--font-mono, ui-monospace, monospace)", fontSize: "0.8rem" }}>
+                    {p.slug}
+                  </td>
+                  <td>{formatMoney(p.price_cents, p.currency, locale)}</td>
+                  <td>{p.stock}</td>
+                  <td>{p.active ? "✓" : "—"}</td>
+                  <td>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <AdminButtonLink
+                        href={localizedPath(`/admin/products/${p.id}/edit`, locale)}
+                        $variant="ghost"
+                      >
+                        {dict.admin.edit}
+                      </AdminButtonLink>
+                      <form action={deleteProduct}>
+                        <input type="hidden" name="locale" value={locale} />
+                        <input type="hidden" name="id" value={p.id} />
+                        <AdminButton
+                          type="submit"
+                          $variant="ghost"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            paddingInline: 14,
+                            color: "#9f2f2f",
+                            borderColor: "#9f2f2f",
+                          }}
+                        >
+                          <Trash2 size={14} />
+                          {dict.admin.delete}
+                        </AdminButton>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </AdminTable>
+        </TableScroll>
+      </AdminTableWrap>
     </div>
   );
 }

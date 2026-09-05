@@ -23,6 +23,7 @@ export function ThemeModeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.dataset.theme = mode;
+    document.documentElement.style.colorScheme = mode;
     window.localStorage.setItem(STORAGE_KEY, mode);
   }, [mode]);
 

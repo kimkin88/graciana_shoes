@@ -6,6 +6,7 @@ import type { ProductRow } from "@/types";
 import { productTitle } from "@/lib/products/display";
 import { updateProductGroup } from "@/app/actions/admin-groups";
 import { AdminButton } from "@/components/admin/AdminButtons";
+import { TableScroll } from "@/components/ui/ScrollArea";
 
 export default async function AdminGroupsPage({
   params,
@@ -58,8 +59,8 @@ export default async function AdminGroupsPage({
         )}
       </section>
 
-      <section style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+      <TableScroll>
+        <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ textAlign: "left", borderBottom: "1px solid #e3d8cd" }}>
               <th style={{ padding: "8px 4px" }}>{dict.admin.nameRu}</th>
@@ -98,7 +99,7 @@ export default async function AdminGroupsPage({
             ))}
           </tbody>
         </table>
-      </section>
+      </TableScroll>
     </div>
   );
 }

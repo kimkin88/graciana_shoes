@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/auth/roles";
 import { isLocale, type Locale } from "@/i18n/config";
 import { localizedPath } from "@/i18n/routing";
 
@@ -21,8 +22,19 @@ export async function login(formData: FormData) {
   if (error) {
     redirect(`${localizedPath("/login", locale)}?error=1`);
   }
+
+  const admin = await isAdmin(supabase);
   revalidatePath(`/${locale}`, "layout");
-  redirect(localizedPath("/", locale));
+
+  const next = String(formData.get("next") ?? "").trim();
+  if (next.startsWith(`/${locale}/`)) {
+    if (next.includes("/admin") && !admin) {
+      redirect(localizedPath("/account/orders", locale));
+    }
+    redirect(next);
+  }
+
+  redirect(admin ? localizedPath("/admin", locale) : localizedPath("/account/orders", locale));
 }
 
 export async function register(formData: FormData) {

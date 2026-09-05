@@ -7,14 +7,29 @@ import { GlobalStyles } from "@/styles/GlobalStyles";
 import { CartProvider } from "@/context/cart-context";
 import { ToastProvider } from "@/context/toast-context";
 import { ThemeModeProvider, useThemeMode } from "@/context/theme-context";
+import { CurrencyProvider } from "@/context/currency-context";
+import { FavoritesProvider } from "@/context/favorites-context";
+import type { FxTable } from "@/lib/money/fx";
 
-function ProvidersInner({ children }: { children: React.ReactNode }) {
+function ProvidersInner({
+  children,
+  initialCurrency,
+  initialRates,
+}: {
+  children: React.ReactNode;
+  initialCurrency?: string;
+  initialRates: FxTable;
+}) {
   const { mode } = useThemeMode();
   return (
     <ThemeProvider theme={mode === "dark" ? darkTheme : lightTheme}>
       <GlobalStyles />
       <ToastProvider>
-        <CartProvider>{children}</CartProvider>
+        <CurrencyProvider initialCurrency={initialCurrency} initialRates={initialRates}>
+          <FavoritesProvider>
+            <CartProvider>{children}</CartProvider>
+          </FavoritesProvider>
+        </CurrencyProvider>
       </ToastProvider>
     </ThemeProvider>
   );
@@ -23,11 +38,21 @@ function ProvidersInner({ children }: { children: React.ReactNode }) {
 /**
  * Wraps the app with SSR-safe styled-components collection + theme + global CSS.
  */
-export function AppProviders({ children }: { children: React.ReactNode }) {
+export function AppProviders({
+  children,
+  initialCurrency,
+  initialRates,
+}: {
+  children: React.ReactNode;
+  initialCurrency?: string;
+  initialRates: FxTable;
+}) {
   return (
     <StyledComponentsRegistry>
       <ThemeModeProvider>
-        <ProvidersInner>{children}</ProvidersInner>
+        <ProvidersInner initialCurrency={initialCurrency} initialRates={initialRates}>
+          {children}
+        </ProvidersInner>
       </ThemeModeProvider>
     </StyledComponentsRegistry>
   );

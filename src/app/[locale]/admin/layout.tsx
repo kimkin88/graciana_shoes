@@ -4,7 +4,8 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { localizedPath } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/auth/roles";
-import { AdminTabs } from "@/components/admin/AdminTabs";
+import { AdminChrome } from "@/components/admin/AdminChrome";
+import { PageShell } from "@/components/layout/PageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -20,35 +21,34 @@ export default async function AdminLayout({
   const locale = raw as Locale;
   const supabase = await createClient();
   if (!(await isAdmin(supabase))) {
-    redirect(localizedPath("/", locale));
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    redirect(
+      user
+        ? localizedPath("/account/orders", locale)
+        : `${localizedPath("/login", locale)}?next=${encodeURIComponent(localizedPath("/admin", locale))}`,
+    );
   }
   const dict = await getDictionary(locale);
 
   return (
-    <div style={{ display: "grid", gap: 20 }}>
-      <div>
-        <h1
-          style={{
-            margin: 0,
-            color: "var(--page-heading, inherit)",
-            fontSize: "clamp(1.5rem, 2.4vw, 2rem)",
-            letterSpacing: "0.02em",
-          }}
-        >
-          {dict.admin.title}
-        </h1>
-        <AdminTabs
-          locale={locale}
-          labels={{
-            stats: dict.admin.stats,
-            products: dict.admin.products,
-            groups: dict.admin.groups,
-            orders: dict.admin.orders,
-            mainPageConstructor: dict.admin.mainPageConstructor,
-          }}
-        />
-      </div>
-      {children}
-    </div>
+    <PageShell width="wide">
+      <AdminChrome
+        locale={locale}
+        title={dict.admin.title}
+        lead={dict.admin.lead}
+        labels={{
+          stats: dict.admin.stats,
+          products: dict.admin.products,
+          groups: dict.admin.groups,
+          orders: dict.admin.orders,
+          users: dict.admin.users,
+          content: dict.admin.siteContent,
+        }}
+      >
+        {children}
+      </AdminChrome>
+    </PageShell>
   );
 }

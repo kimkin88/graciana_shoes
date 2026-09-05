@@ -8,26 +8,19 @@ import { localizedPath } from "@/i18n/routing";
 
 const Wrap = styled.nav`
   display: flex;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 16px;
   flex-wrap: wrap;
 `;
 
 const Tab = styled(Link)<{ $active?: boolean }>`
-  border: 1px solid
-    ${({ theme, $active }) => ($active ? theme.colors.buttonPrimaryBorder : theme.colors.buttonGhostBorder)};
-  border-radius: 999px;
+  border: 1px solid ${({ theme }) => theme.colors.text};
   padding: 8px 12px;
-  font-size: 0.82rem;
-  letter-spacing: 0.07em;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  background: ${({ theme, $active }) => ($active ? theme.colors.buttonPrimaryBg : theme.colors.buttonGhostBg)};
-  color: ${({ theme, $active }) => ($active ? theme.colors.buttonPrimaryText : theme.colors.buttonGhostText)};
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
-  &:hover {
-    transform: translateY(-1px);
-    background: ${({ theme, $active }) => ($active ? theme.colors.buttonPrimaryHoverBg : theme.colors.accent)};
-  }
+  background: ${({ theme, $active }) => ($active ? theme.colors.text : "transparent")};
+  color: ${({ theme, $active }) => ($active ? theme.colors.background : theme.colors.text)};
 `;
 
 type Props = {
@@ -37,7 +30,8 @@ type Props = {
     products: string;
     groups: string;
     orders: string;
-    mainPageConstructor: string;
+    users?: string;
+    content: string;
   };
 };
 
@@ -48,11 +42,10 @@ export function AdminTabs({ locale, labels }: Props) {
     { href: localizedPath("/admin/products", locale), label: labels.products, key: "products" },
     { href: localizedPath("/admin/groups", locale), label: labels.groups, key: "groups" },
     { href: localizedPath("/admin/orders", locale), label: labels.orders, key: "orders" },
-    {
-      href: localizedPath("/admin/main-page-constructor", locale),
-      label: labels.mainPageConstructor,
-      key: "main-page-constructor",
-    },
+    ...(labels.users
+      ? [{ href: localizedPath("/admin/users", locale), label: labels.users, key: "users" as const }]
+      : []),
+    { href: localizedPath("/admin/content", locale), label: labels.content, key: "content" },
   ] as const;
 
   return (

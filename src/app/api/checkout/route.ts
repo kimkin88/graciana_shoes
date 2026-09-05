@@ -36,18 +36,32 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const ids = [...new Set(lines.map((l) => l.productId))];
-    const { data: products, error: perr } = await supabase
-      .from("products")
-      .select("*")
-      .in("id", ids)
-      .eq("active", true);
-
-    if (perr || !products?.length) {
-      return NextResponse.json({ error: "products" }, { status: 400 });
+    const ids = [...new Set(lines.map((l) => l.productId).filter((id) => typeof id === "string" && id))];
+    if (!ids.length) {
+      return NextResponse.json({ error: "cart" }, { status: 400 });
     }
 
-    const byId = new Map(products.map((p) => [p.id, p]));
+    // Service role: distinguish missing vs inactive (anon RLS hides inactive; admins can still see them in UI).
+    const { data: products, error: perr } = await service
+      .from("products")
+      .select("*")
+      .in("id", ids);
+
+    if (perr) {
+      console.error("checkout products lookup", perr);
+      return NextResponse.json({ error: "products" }, { status: 500 });
+    }
+
+    const byId = new Map((products ?? []).map((p) => [p.id, p]));
+    const missing = ids.filter((id) => !byId.has(id));
+    if (missing.length) {
+      return NextResponse.json({ error: "unknown", productIds: missing }, { status: 400 });
+    }
+
+    const inactive = ids.filter((id) => byId.get(id)?.active !== true);
+    if (inactive.length) {
+      return NextResponse.json({ error: "inactive", productIds: inactive }, { status: 400 });
+    }
 
     const validated: {
       product_id: string;
@@ -56,19 +70,19 @@ export async function POST(request: Request) {
     }[] = [];
 
     for (const line of lines) {
-      const p = byId.get(line.productId);
-      if (!p) {
-        return NextResponse.json({ error: "unknown" }, { status: 400 });
-      }
+      const p = byId.get(line.productId)!;
       const qty = Math.floor(Number(line.quantity));
       if (qty < 1 || qty > 99) {
-        return NextResponse.json({ error: "qty" }, { status: 400 });
+        return NextResponse.json({ error: "qty", productId: p.id }, { status: 400 });
       }
       if (p.stock < qty) {
         return NextResponse.json(
           { error: "stock", productId: p.id },
           { status: 409 },
         );
+      }
+      if (!Number.isFinite(p.price_cents) || p.price_cents < 1) {
+        return NextResponse.json({ error: "price", productId: p.id }, { status: 400 });
       }
       validated.push({
         product_id: p.id,
@@ -109,13 +123,14 @@ export async function POST(request: Request) {
       const p = byId.get(row.product_id)!;
       const name =
         locale === "en" ? p.name_en || p.name_ru : p.name_ru || p.name_en;
+      const currency = String(p.currency || "byn").trim().toLowerCase();
       return {
         quantity: row.quantity,
         price_data: {
-          currency: p.currency,
+          currency,
           unit_amount: p.price_cents,
           product_data: {
-            name,
+            name: name || "Item",
             metadata: { product_id: p.id },
           },
         },
@@ -152,6 +167,10 @@ export async function POST(request: Request) {
         p_pending_id: pendingId,
       });
       if (relErr) console.error("release_checkout_hold failed", relErr);
+    }
+    const message = e instanceof Error ? e.message : "";
+    if (/currency|amount|invalid/i.test(message)) {
+      return NextResponse.json({ error: "stripe", detail: message }, { status: 400 });
     }
     return NextResponse.json({ error: "server" }, { status: 500 });
   }

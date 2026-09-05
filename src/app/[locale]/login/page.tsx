@@ -1,16 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
-import { localizedPath } from "@/i18n/routing";
-import { login } from "@/app/actions/auth";
-import { Button } from "@/components/ui/Button";
-import { Field, Input, Label } from "@/components/ui/Input";
-import styled from "styled-components";
-
-const AuthSubmitButton = styled(Button)`
-  min-width: 140px;
-`;
+import { PageShell } from "@/components/layout/PageShell";
+import { LoginForm } from "@/components/auth/LoginForm";
 
 export default async function LoginPage({
   params,
@@ -24,33 +16,31 @@ export default async function LoginPage({
   const locale = raw as Locale;
   const dict = await getDictionary(locale);
   const sp = await searchParams;
-  const err = sp.error === "1";
+  const err = sp.error === "1" || sp.error === "admin";
+  const registered = sp.registered === "1";
+  const next = typeof sp.next === "string" ? sp.next : "";
 
   return (
-    <div style={{ maxWidth: 400 }}>
-      <h1>{dict.auth.loginTitle}</h1>
-      {err ? <p style={{ color: "#b91c1c" }}>{dict.auth.error}</p> : null}
-      <form action={login} style={{ marginTop: 16 }}>
-        <input type="hidden" name="locale" value={locale} />
-        <Field>
-          <Label htmlFor="email">{dict.auth.email}</Label>
-          <Input id="email" name="email" type="email" required autoComplete="email" />
-        </Field>
-        <Field>
-          <Label htmlFor="password">{dict.auth.password}</Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-          />
-        </Field>
-        <AuthSubmitButton type="submit">{dict.auth.submitLogin}</AuthSubmitButton>
-      </form>
-      <p style={{ marginTop: 16 }}>
-        <Link href={localizedPath("/register", locale)}>{dict.auth.needAccount}</Link>
-      </p>
-    </div>
+    <PageShell width="narrow">
+      <LoginForm
+        locale={locale}
+        next={next || undefined}
+        err={err}
+        registered={registered}
+        labels={{
+          title: dict.auth.loginTitle,
+          hint: dict.auth.adminAutoHint,
+          email: dict.auth.email,
+          password: dict.auth.password,
+          submit: dict.auth.submitLogin,
+          needAccount: dict.auth.needAccount,
+          error: dict.auth.error,
+          registeredOk:
+            locale === "ru"
+              ? "Аккаунт создан. Войдите, чтобы продолжить."
+              : "Account created. Sign in to continue.",
+        }}
+      />
+    </PageShell>
   );
 }

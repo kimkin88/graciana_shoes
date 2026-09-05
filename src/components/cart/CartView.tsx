@@ -6,8 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { Locale } from "@/i18n/config";
 import { localizedPath } from "@/i18n/routing";
 import { useCart } from "@/context/cart-context";
+import { useCurrency } from "@/context/currency-context";
 import { Button } from "@/components/ui/Button";
-import { formatMoney } from "@/lib/format/money";
 import { productTitle } from "@/lib/products/display";
 import type { Messages } from "@/i18n/get-dictionary";
 import type { ProductRow } from "@/types";
@@ -31,6 +31,7 @@ type Props = { locale: Locale; dict: Messages };
 /** Hydrates line names/prices from the server using verified catalog data. */
 export function CartView({ locale, dict }: Props) {
   const { lines, ready, setQuantity, removeLine, clear } = useCart();
+  const { convert, displayCurrency, format } = useCurrency();
   const [map, setMap] = useState<Record<string, CartProduct>>({});
   const [loading, setLoading] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -72,15 +73,13 @@ export function CartView({ locale, dict }: Props) {
 
   const total = useMemo(() => {
     let sum = 0;
-    let currency = "usd";
     for (const line of lines) {
       const p = effectiveMap[line.productId];
       if (!p) continue;
-      sum += p.price_cents * line.quantity;
-      currency = p.currency;
+      sum += convert(p.price_cents * line.quantity, p.currency);
     }
-    return { sum, currency };
-  }, [lines, effectiveMap]);
+    return { sum, currency: displayCurrency };
+  }, [lines, effectiveMap, convert, displayCurrency]);
 
   if (!ready || (loading && lines.length > 0)) {
     return <p>{dict.common.loading}</p>;
@@ -139,7 +138,7 @@ export function CartView({ locale, dict }: Props) {
             <div style={{ flex: "1 1 200px" }}>
               <Link href={href}>{title}</Link>
               <div style={{ fontSize: "0.85rem", color: "inherit" }}>
-                {formatMoney(p.price_cents, p.currency, locale)} {dict.cart.each}
+                {format(p.price_cents, p.currency, locale)} {dict.cart.each}
               </div>
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -163,7 +162,7 @@ export function CartView({ locale, dict }: Props) {
       })}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <strong>
-          {dict.cart.total}: {formatMoney(total.sum, total.currency, locale)}
+          {dict.cart.total}: {format(total.sum, total.currency, locale)}
         </strong>
         <div style={{ display: "flex", gap: 8 }}>
           <Button type="button" $variant="ghost" onClick={clear}>
@@ -203,12 +202,19 @@ function CheckoutButton({
           const data = (await res.json()) as { url?: string; error?: string };
           if (!res.ok) {
             const stock = res.status === 409 || data.error === "stock";
+            const unavailable =
+              data.error === "inactive" ||
+              data.error === "unknown" ||
+              data.error === "products" ||
+              data.error === "price";
             toast({
               variant: "error",
               title: dict.toast.checkoutFailed,
               description: stock
                 ? dict.toast.checkoutStock
-                : dict.toast.checkoutGeneric,
+                : unavailable
+                  ? dict.toast.checkoutUnavailable
+                  : dict.toast.checkoutGeneric,
             });
             return;
           }

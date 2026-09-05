@@ -4,6 +4,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { localizedPath } from "@/i18n/routing";
 import { ClearCartOnSuccess } from "@/components/checkout/ClearCartOnSuccess";
+import { PageShell } from "@/components/layout/PageShell";
 
 export default async function CheckoutSuccessPage({
   params,
@@ -16,11 +17,13 @@ export default async function CheckoutSuccessPage({
   const dict = await getDictionary(locale);
 
   return (
+    <PageShell width="narrow">
     <div style={{ maxWidth: 520 }}>
       <ClearCartOnSuccess />
       <h1>{dict.checkout.successTitle}</h1>
       <p style={{ lineHeight: 1.6 }}>{dict.checkout.successBody}</p>
       <Link href={localizedPath("/", locale)}>{dict.checkout.backHome}</Link>
     </div>
+    </PageShell>
   );
 }

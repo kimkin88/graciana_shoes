@@ -6,6 +6,7 @@ import { localizedPath } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format/money";
 import type { OrderRow } from "@/types";
+import { PageShell } from "@/components/layout/PageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ export default async function OrdersPage({
   const rows = (orders ?? []) as OrderRow[];
 
   return (
+    <PageShell>
     <div>
       <h1 style={{ marginTop: 0 }}>{dict.orders.title}</h1>
       {!rows.length ? (
@@ -76,5 +78,6 @@ export default async function OrdersPage({
         <Link href={localizedPath("/", locale)}>{dict.checkout.backHome}</Link>
       </p>
     </div>
+    </PageShell>
   );
 }

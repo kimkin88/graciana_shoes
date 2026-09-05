@@ -1,22 +1,69 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import styled from "styled-components";
 import type { Locale } from "@/i18n/config";
 import type { ProductRow } from "@/types";
 import { ProductCard } from "@/components/product/ProductCard";
 
+const gridCss = `
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 10px;
+  width: 100%;
+  @media (min-width: 900px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 26px 18px;
+  }
+  @media (min-width: 1100px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 28px 20px;
+  }
+  @media (min-width: 1280px) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px 24px;
+  }
+`;
+
+const Grid = styled.div`
+  ${gridCss}
+`;
+
+const MotionGrid = styled(motion.div)`
+  ${gridCss}
+`;
+
+const Cell = styled.div`
+  min-width: 0;
+`;
+
+const MotionCell = styled(motion.div)`
+  min-width: 0;
+`;
+
+type CardDict = {
+  addToCart: string;
+  outOfStock: string;
+  sale?: string;
+  newIn?: string;
+  addedToCart?: string;
+  favorite?: string;
+  unfavorite?: string;
+  inCart?: string;
+};
+
 type Props = {
   products: ProductRow[];
   locale: Locale;
-  /** `minmax` column width in px */
-  minColumnPx?: number;
+  loud?: boolean;
+  cardDict?: CardDict;
 };
 
 const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.045, delayChildren: 0.02 },
+    transition: { staggerChildren: 0.04, delayChildren: 0.03 },
   },
 };
 
@@ -25,54 +72,32 @@ const item = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] as const },
+    transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] as const },
   },
 };
 
-/** Staggered grid entrance + light hover lift on product tiles. */
-export function ProductGridMotion({
-  products,
-  locale,
-  minColumnPx = 220,
-}: Props) {
+export function ProductGridMotion({ products, locale, loud, cardDict }: Props) {
   const reduceMotion = useReducedMotion();
-
-  const gridStyle = {
-    display: "grid" as const,
-    gridTemplateColumns: `repeat(auto-fill, minmax(${minColumnPx}px, 1fr))`,
-    gap: 16,
-  };
 
   if (reduceMotion) {
     return (
-      <div style={gridStyle}>
+      <Grid>
         {products.map((p) => (
-          <div key={p.id} style={{ height: "100%" }}>
-            <ProductCard product={p} locale={locale} />
-          </div>
+          <Cell key={p.id}>
+            <ProductCard product={p} locale={locale} loud={loud} dict={cardDict} />
+          </Cell>
         ))}
-      </div>
+      </Grid>
     );
   }
 
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      style={gridStyle}
-    >
+    <MotionGrid variants={container} initial="hidden" animate="show">
       {products.map((p) => (
-        <motion.div
-          key={p.id}
-          variants={item}
-          layout
-          whileHover={{ y: -3, transition: { duration: 0.16, ease: "easeOut" } }}
-          style={{ height: "100%" }}
-        >
-          <ProductCard product={p} locale={locale} />
-        </motion.div>
+        <MotionCell key={p.id} variants={item}>
+          <ProductCard product={p} locale={locale} loud={loud} dict={cardDict} />
+        </MotionCell>
       ))}
-    </motion.div>
+    </MotionGrid>
   );
 }
