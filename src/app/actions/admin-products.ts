@@ -409,19 +409,7 @@ export async function updateProduct(formData: FormData) {
 }
 
 export async function deleteProduct(formData: FormData) {
-  const locale = readLocale(formData);
-  const supabase = await createClient();
-  if (!(await isAdmin(supabase))) redirect(localizedPath("/", locale));
-  const service = createServiceClient();
-  const id = String(formData.get("id") ?? "");
-  if (!id) redirect(localizedPath("/admin/products", locale));
-
-  const { error } = await service.from("products").delete().eq("id", id);
-  if (error) console.error(error);
-  await deleteProductFolder(service, id);
-
-  revalidatePath(`/${locale}`, "layout");
-  revalidatePath(`/${locale}/products`, "page");
-  revalidatePath(`/${locale}/admin/products`, "page");
-  redirect(localizedPath("/admin/products", locale));
+  // Re-export kept for older call sites; prefer `@/app/actions/delete-product`.
+  const { deleteProduct: run } = await import("@/app/actions/delete-product");
+  return run(formData);
 }

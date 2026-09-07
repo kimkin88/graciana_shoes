@@ -1,5 +1,4 @@
 import "server-only";
-import sharp from "sharp";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/storage/urls";
 
@@ -64,6 +63,8 @@ async function cleanupFolderExcept(
 }
 
 export async function createOptimizedJpeg(input: Buffer) {
+  // Lazy-load sharp so admin list/delete routes don't crash if native bindings fail at module init.
+  const sharp = (await import("sharp")).default;
   return sharp(input)
     .rotate()
     .resize({

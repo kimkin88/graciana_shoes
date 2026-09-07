@@ -3,7 +3,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { localizedPath } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
-import { deleteProduct } from "@/app/actions/admin-products";
+import { deleteProduct } from "@/app/actions/delete-product";
 import { formatMoney } from "@/lib/format/money";
 import { productTitle } from "@/lib/products/display";
 import type { ProductRow } from "@/types";
