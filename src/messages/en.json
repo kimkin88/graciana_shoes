@@ -77,6 +77,9 @@
   },
   "product": {
     "description": "Description",
+    "sizeByCity": "Sizes in stores",
+    "cityMinsk": "Minsk",
+    "cityBrest": "Brest",
     "stock": "In stock",
     "related": "You may also like",
     "alsoInterested": "You might also be interested…",
@@ -113,7 +116,16 @@
   "checkout": {
     "successTitle": "Thank you for your order",
     "successBody": "We sent a confirmation email. You can review order status under Orders.",
-    "backHome": "Back to home"
+    "confirmingTitle": "Confirming payment",
+    "confirmingBody": "We are waiting for the bank to confirm this payment. Please keep this page open.",
+    "unconfirmedTitle": "Payment is not confirmed yet",
+    "unconfirmedBody": "If you completed payment, the order will appear in your account once the bank notifies us. Your cart is still saved.",
+    "declinedTitle": "Payment was declined",
+    "declinedBody": "The bank did not accept this payment. You can return to the cart and try again.",
+    "failedTitle": "Payment was not completed",
+    "failedBody": "The payment did not go through. Your order is not paid. You can try again from the cart.",
+    "backHome": "Back to home",
+    "backCart": "Back to cart"
   },
   "auth": {
     "loginTitle": "Log in",
@@ -202,6 +214,7 @@
     "productCount": "Products in catalog",
     "addProduct": "Add product",
     "edit": "Edit",
+    "duplicate": "Duplicate",
     "delete": "Delete",
     "save": "Save",
     "cancel": "Cancel",
@@ -274,6 +287,9 @@
     "downloadVideo": "Download video",
     "colors": "Colors",
     "sizes": "Sizes",
+    "sizesMinsk": "Sizes in Minsk",
+    "sizesBrest": "Sizes in Brest",
+    "sizesCityHint": "If a city is left empty, the storefront shows the shared size list while the product is in stock.",
     "multiValueHint": "Comma separated (e.g. black, white, red)",
     "orderList": "All orders",
     "customer": "Customer",
@@ -426,6 +442,7 @@
     "checkoutFailed": "Checkout could not start",
     "checkoutStock": "Not enough stock — please refresh your cart.",
     "checkoutUnavailable": "Some items are unavailable or inactive — remove them and try again.",
+    "checkoutPayment": "Online payment is not available right now. Please try again later.",
     "checkoutGeneric": "Please try again or contact support."
   },
   "status": {

@@ -327,6 +327,7 @@ export function CartDrawer({ locale, dict }: { locale: Locale; dict: Messages })
           data.error === "unknown" ||
           data.error === "products" ||
           data.error === "price";
+        const payment = data.error === "payment" || data.error === "currency" || res.status === 503;
         toast({
           variant: "error",
           title: dict.toast.checkoutFailed,
@@ -334,7 +335,9 @@ export function CartDrawer({ locale, dict }: { locale: Locale; dict: Messages })
             ? dict.toast.checkoutStock
             : unavailable
               ? dict.toast.checkoutUnavailable
-              : dict.toast.checkoutGeneric,
+              : payment
+                ? dict.toast.checkoutPayment
+                : dict.toast.checkoutGeneric,
         });
         return;
       }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect, useRef } from "react";
 import styled from "styled-components";
 import { Heart } from "lucide-react";
 import type { Locale } from "@/i18n/config";
@@ -176,12 +177,22 @@ export function ProductCard({ product, locale: localeProp, dict: dictProp, prior
   const { addToCart, quantityOf, openDrawer } = useCart();
   const toast = useToast();
   const quick = useProductQuickViewOptional();
+  const cardRef = useRef<HTMLElement>(null);
   const loved = has(product.id);
   const inStock = product.stock > 0;
   const qty = quantityOf(product.id);
   const inCart = qty > 0;
 
+  useLayoutEffect(() => {
+    cardRef.current?.setAttribute("data-product-id", product.id);
+  }, [product.id]);
+
   function openCard() {
+    try {
+      sessionStorage.setItem("graciana-return-product", product.id);
+    } catch {
+      /* ignore */
+    }
     quick?.open(product);
   }
 
@@ -204,7 +215,7 @@ export function ProductCard({ product, locale: localeProp, dict: dictProp, prior
       : (dict?.addToCart ?? "Add to cart");
 
   return (
-    <Card $plain>
+    <Card ref={cardRef} $plain>
       <CardMedia>
         <Open type="button" onClick={openCard} aria-label={title}>
           <ProductCardMedia

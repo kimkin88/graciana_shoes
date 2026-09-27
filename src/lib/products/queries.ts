@@ -8,6 +8,8 @@ export type ProductFilters = {
   category?: string;
   color?: string;
   size?: string;
+  colors?: string[];
+  sizes?: string[];
   minCents?: number;
   maxCents?: number;
   featuredOnly?: boolean;
@@ -53,12 +55,14 @@ export async function fetchProducts(
     const aliases = categoryAliases(filters.category);
     q = q.in("category", aliases);
   }
-  if (filters.color) {
-    q = q.contains("colors", [filters.color.toLowerCase()]);
-  }
-  if (filters.size) {
-    q = q.contains("sizes", [filters.size.toLowerCase()]);
-  }
+  const colors = (filters.colors?.length ? filters.colors : filters.color ? [filters.color] : [])
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const sizes = (filters.sizes?.length ? filters.sizes : filters.size ? [filters.size] : [])
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (colors.length) q = q.overlaps("colors", colors);
+  if (sizes.length) q = q.overlaps("sizes", sizes);
 
   if (filters.search && filters.search.trim()) {
     const s = escapeIlike(filters.search.trim());

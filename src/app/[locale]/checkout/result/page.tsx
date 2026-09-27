@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
-import { ConfirmPayment } from "@/components/checkout/ConfirmPayment";
+import { localizedPath } from "@/i18n/routing";
 import { PageShell } from "@/components/layout/PageShell";
 
-export default async function CheckoutSuccessPage({
+export default async function CheckoutResultPage({
   params,
   searchParams,
 }: {
@@ -16,13 +17,17 @@ export default async function CheckoutSuccessPage({
   const locale = raw as Locale;
   const dict = await getDictionary(locale);
   const sp = await searchParams;
-  const pending = typeof sp.pending === "string" ? sp.pending : "";
-  const sessionId = typeof sp.session_id === "string" ? sp.session_id : "";
+  const status = typeof sp.status === "string" ? sp.status : "failed";
+  const declined = status === "declined" || status === "cancel" || status === "cancelled";
 
   return (
     <PageShell width="narrow">
       <div style={{ maxWidth: 520 }}>
-        <ConfirmPayment locale={locale} pending={pending} sessionId={sessionId} dict={dict} />
+        <h1>{declined ? dict.checkout.declinedTitle : dict.checkout.failedTitle}</h1>
+        <p style={{ lineHeight: 1.6 }}>
+          {declined ? dict.checkout.declinedBody : dict.checkout.failedBody}
+        </p>
+        <Link href={localizedPath("/cart", locale)}>{dict.checkout.backCart}</Link>
       </div>
     </PageShell>
   );

@@ -81,7 +81,7 @@ export function ProductGridMotion({ products, locale, loud, cardDict }: Props) {
 
   if (reduceMotion) {
     return (
-      <Grid>
+      <Grid className="product-grid">
         {products.map((p) => (
           <Cell key={p.id}>
             <ProductCard product={p} locale={locale} loud={loud} dict={cardDict} />
@@ -92,7 +92,7 @@ export function ProductGridMotion({ products, locale, loud, cardDict }: Props) {
   }
 
   return (
-    <MotionGrid variants={container} initial="hidden" animate="show">
+    <MotionGrid className="product-grid" variants={container} initial="hidden" animate="show">
       {products.map((p) => (
         <MotionCell key={p.id} variants={item}>
           <ProductCard product={p} locale={locale} loud={loud} dict={cardDict} />

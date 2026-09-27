@@ -344,8 +344,8 @@ export function ProductFilters({
     const params = new URLSearchParams();
     if (q.trim()) params.set("q", q.trim());
     if (category) params.set("category", category);
-    if (selectedColors[0]) params.set("color", selectedColors[0]);
-    if (selectedSizes[0]) params.set("size", selectedSizes[0]);
+    if (selectedColors.length) params.set("color", selectedColors.join(","));
+    if (selectedSizes.length) params.set("size", selectedSizes.join(","));
     if (min.trim() && min !== "0") params.set("min", min.trim());
     if (max.trim() && max !== String(PRICE_MAX_MAJOR)) params.set("max", max.trim());
     if (sort && sort !== "default") params.set("sort", sort);

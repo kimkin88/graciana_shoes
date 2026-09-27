@@ -4,6 +4,7 @@ import { getDictionary } from "@/i18n/get-dictionary";
 import { localizedPath } from "@/i18n/routing";
 import { createClient } from "@/lib/supabase/server";
 import { deleteProduct } from "@/app/actions/delete-product";
+import { duplicateProduct } from "@/app/actions/duplicate-product";
 import { formatMoney } from "@/lib/format/money";
 import { productTitle } from "@/lib/products/display";
 import type { ProductRow } from "@/types";
@@ -76,6 +77,13 @@ export default async function AdminProductsPage({
                       >
                         {dict.admin.edit}
                       </AdminButtonLink>
+                      <form action={duplicateProduct}>
+                        <input type="hidden" name="locale" value={locale} />
+                        <input type="hidden" name="id" value={p.id} />
+                        <AdminButton type="submit" $variant="ghost">
+                          {dict.admin.duplicate}
+                        </AdminButton>
+                      </form>
                       <form action={deleteProduct}>
                         <input type="hidden" name="locale" value={locale} />
                         <input type="hidden" name="id" value={p.id} />

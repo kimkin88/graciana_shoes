@@ -1,6 +1,7 @@
 "use client";
 
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
+import { usePathname } from "next/navigation";
 import styled from "styled-components";
 import {
   createContext,
@@ -144,11 +145,21 @@ function preferReducedMotion() {
 }
 
 /** Full-page Radix scroll shell — keeps sticky header / layout styles intact. */
+const SCROLL_MEMORY_KEY = "graciana-scroll-v1";
+const RETURN_PRODUCT_KEY = "graciana-return-product";
+
+function scrollMemoryKey() {
+  return window.location.pathname + window.location.search;
+}
+
 export function PageScrollShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const viewportRef = useRef<HTMLDivElement>(null);
   const currentRef = useRef(0);
   const targetRef = useRef(0);
   const rafRef = useRef(0);
+  const positionsRef = useRef<Map<string, number>>(new Map());
+  const restoreNextRef = useRef(false);
 
   const scrollBy = useCallback((deltaY: number) => {
     const el = viewportRef.current;
@@ -193,6 +204,118 @@ export function PageScrollShell({ children }: { children: ReactNode }) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SCROLL_MEMORY_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Record<string, number>;
+      positionsRef.current = new Map(
+        Object.entries(parsed).filter((entry): entry is [string, number] => Number.isFinite(entry[1])),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    const onPop = () => {
+      restoreNextRef.current = true;
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    const persist = () => {
+      positionsRef.current.set(scrollMemoryKey(), el.scrollTop);
+      try {
+        sessionStorage.setItem(
+          SCROLL_MEMORY_KEY,
+          JSON.stringify(Object.fromEntries(positionsRef.current)),
+        );
+      } catch {
+        /* ignore */
+      }
+    };
+
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(persist);
+    };
+    const onClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const card = target.closest("[data-product-id]");
+      const productId = card?.getAttribute("data-product-id");
+      if (productId) {
+        try {
+          sessionStorage.setItem(RETURN_PRODUCT_KEY, productId);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (target.closest("a")) persist();
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", onClick, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      el.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const shouldRestore = restoreNextRef.current;
+    restoreNextRef.current = false;
+    const top = shouldRestore ? (positionsRef.current.get(scrollMemoryKey()) ?? 0) : 0;
+
+    const apply = () => {
+      const node = viewportRef.current;
+      if (!node) return;
+      let next = top;
+      if (shouldRestore) {
+        const productId = sessionStorage.getItem(RETURN_PRODUCT_KEY);
+        const child = productId
+          ? node.querySelector(`[data-product-id="${CSS.escape(productId)}"]`)
+          : null;
+        if (child instanceof HTMLElement) {
+          const view = node.getBoundingClientRect();
+          const card = child.getBoundingClientRect();
+          next = Math.max(0, node.scrollTop + (card.top - view.top) - 96);
+        }
+      }
+      node.scrollTop = next;
+      currentRef.current = next;
+      targetRef.current = next;
+    };
+    apply();
+    const frame = requestAnimationFrame(apply);
+    const timer = window.setTimeout(() => {
+      if (!shouldRestore) return;
+      const node = viewportRef.current;
+      const productId = sessionStorage.getItem(RETURN_PRODUCT_KEY);
+      const child = productId && node
+        ? node.querySelector(`[data-product-id="${CSS.escape(productId)}"]`)
+        : null;
+      if (!(node && child instanceof HTMLElement)) return;
+      const view = node.getBoundingClientRect();
+      const card = child.getBoundingClientRect();
+      if (card.top > view.bottom - 48 || card.bottom < view.top + 48) apply();
+    }, 400);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const el = viewportRef.current;

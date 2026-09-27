@@ -21,7 +21,10 @@ const cormorant = Cormorant_Garamond({
   preload: false,
 });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: "Graciana",
   description: "Женская обувь — editorial storefront",
 };
@@ -32,11 +35,22 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
+  const themeCookie = cookieStore.get("graciana-theme")?.value;
+  const initialTheme = themeCookie === "dark" ? "dark" : "light";
   const [rates] = await Promise.all([getNbrbRates()]);
   return (
-    <html lang="ru" className={`${manrope.variable} ${cormorant.variable}`}>
+    <html
+      lang="ru"
+      data-theme={initialTheme}
+      className={`${manrope.variable} ${cormorant.variable}`}
+      style={{ colorScheme: initialTheme }}
+    >
       <body className={manrope.className}>
-        <AppProviders initialCurrency={cookieStore.get(FX_COOKIE)?.value} initialRates={rates}>
+        <AppProviders
+          initialCurrency={cookieStore.get(FX_COOKIE)?.value}
+          initialRates={rates}
+          initialTheme={initialTheme}
+        >
           {children}
         </AppProviders>
       </body>

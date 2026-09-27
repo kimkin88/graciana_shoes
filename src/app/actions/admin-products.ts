@@ -122,6 +122,12 @@ function parseProductFields(formData: FormData) {
   const sizes = parseCsvValues(String(formData.get("sizes") ?? ""));
   const tags = parseCsvValues(String(formData.get("tags") ?? ""));
   const specs = textToSpecs(String(formData.get("specs") ?? ""));
+  const sizesMinsk = String(formData.get("sizes_minsk") ?? "").trim();
+  const sizesBrest = String(formData.get("sizes_brest") ?? "").trim();
+  delete specs.sizes_minsk;
+  delete specs.sizes_brest;
+  if (sizesMinsk) specs.sizes_minsk = sizesMinsk;
+  if (sizesBrest) specs.sizes_brest = sizesBrest;
   let galleryRaw: unknown = [];
   try {
     galleryRaw = JSON.parse(String(formData.get("gallery_json") ?? "[]"));
@@ -259,8 +265,11 @@ export async function createProduct(formData: FormData) {
   const service = createServiceClient();
   const fields = parseProductFields(formData);
   if (!isValidProductSlug(fields.slug)) fail(locale, "/admin/products/new", "slug");
-  if (!fields.name_ru || !fields.name_en || Number.isNaN(fields.price_cents)) {
+  if (!fields.name_ru || !fields.name_en || !Number.isFinite(fields.price_cents) || fields.price_cents < 1) {
     fail(locale, "/admin/products/new", "fields");
+  }
+  if (fields.compare_at_cents != null && fields.compare_at_cents <= fields.price_cents) {
+    fail(locale, "/admin/products/new", "price");
   }
 
   // Never persist a bare numeric slug — replace with UUID after insert if needed.
@@ -358,6 +367,12 @@ export async function updateProduct(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const fields = parseProductFields(formData);
   if (!id || !isValidProductSlug(fields.slug)) fail(locale, "/admin/products", "slug");
+  if (!fields.name_ru || !fields.name_en || !Number.isFinite(fields.price_cents) || fields.price_cents < 1) {
+    fail(locale, `/admin/products/${id || "new"}/edit`, "fields");
+  }
+  if (fields.compare_at_cents != null && fields.compare_at_cents <= fields.price_cents) {
+    fail(locale, `/admin/products/${id}/edit`, "price");
+  }
 
   const slug =
     isNumericSlug(fields.slug) || fields.slug === "product" || !fields.slug ? id : fields.slug;

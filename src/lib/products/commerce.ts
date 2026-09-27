@@ -55,6 +55,36 @@ export function productShortText(product: ProductRow, locale: Locale) {
   return product.short_description_ru || product.short_description_en || null;
 }
 
+/** Stored in product specs so the storefront can list sizes per shop. */
+export const CITY_SIZE_SPEC = {
+  minsk: "sizes_minsk",
+  brest: "sizes_brest",
+} as const;
+
+export function publicSpecs(specs: Record<string, string>) {
+  const hidden = new Set<string>(Object.values(CITY_SIZE_SPEC));
+  return Object.fromEntries(Object.entries(specs).filter(([key]) => !hidden.has(key)));
+}
+
+/** Per-city sizes. If neither city is set, in-stock products use the shared size list. */
+export function cityAvailability(product: {
+  stock: number;
+  sizes?: string[] | null;
+  specs?: Record<string, string> | null;
+}) {
+  const specs = parseSpecs(product.specs);
+  const minsk = specs[CITY_SIZE_SPEC.minsk] ?? "";
+  const brest = specs[CITY_SIZE_SPEC.brest] ?? "";
+  const custom = Boolean(minsk || brest);
+  const fallback = product.stock > 0 ? (product.sizes ?? []).filter(Boolean).join(", ") : "";
+  return (
+    [
+      { id: "minsk" as const, sizes: custom ? minsk : fallback },
+      { id: "brest" as const, sizes: custom ? brest : fallback },
+    ] as const
+  ).filter((row) => row.sizes);
+}
+
 export function parseSpecs(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const out: Record<string, string> = {};

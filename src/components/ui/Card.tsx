@@ -1,5 +1,6 @@
 "use client";
 
+import { forwardRef } from "react";
 import { Slot } from "@radix-ui/react-slot";
 import styled from "styled-components";
 
@@ -37,11 +38,11 @@ const PlainRoot = styled.article`
 `;
 
 /** Radix Slot-based card. Use `$plain` for borderless product tiles. */
-export function Card({ asChild, $plain, ...props }: CardProps) {
-  if (asChild) return <Slot {...props} />;
+export const Card = forwardRef<HTMLElement, CardProps>(function Card({ asChild, $plain, ...props }, ref) {
+  if (asChild) return <Slot ref={ref} {...props} />;
   const Comp = $plain ? PlainRoot : Root;
-  return <Comp {...props} />;
-}
+  return <Comp ref={ref} {...props} />;
+});
 
 export const CardMedia = Media;
 export const CardBody = Body;

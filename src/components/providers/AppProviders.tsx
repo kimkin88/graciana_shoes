@@ -6,7 +6,7 @@ import { darkTheme, lightTheme } from "@/styles/theme";
 import { GlobalStyles } from "@/styles/GlobalStyles";
 import { CartProvider } from "@/context/cart-context";
 import { ToastProvider } from "@/context/toast-context";
-import { ThemeModeProvider, useThemeMode } from "@/context/theme-context";
+import { ThemeModeProvider, useThemeMode, type ThemeMode } from "@/context/theme-context";
 import { CurrencyProvider } from "@/context/currency-context";
 import { FavoritesProvider } from "@/context/favorites-context";
 import type { FxTable } from "@/lib/money/fx";
@@ -42,14 +42,16 @@ export function AppProviders({
   children,
   initialCurrency,
   initialRates,
+  initialTheme = "light",
 }: {
   children: React.ReactNode;
   initialCurrency?: string;
   initialRates: FxTable;
+  initialTheme?: ThemeMode;
 }) {
   return (
     <StyledComponentsRegistry>
-      <ThemeModeProvider>
+      <ThemeModeProvider initialMode={initialTheme}>
         <ProvidersInner initialCurrency={initialCurrency} initialRates={initialRates}>
           {children}
         </ProvidersInner>

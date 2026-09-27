@@ -66,11 +66,98 @@ const Stage = styled.div<{ $mobile?: boolean }>`
   .preview-frame {
     margin: 0 auto;
     width: 100%;
-    max-width: ${({ $mobile }) => ($mobile ? "390px" : "100%")};
+    max-width: ${({ $mobile }) => ($mobile ? "390px" : "1280px")};
     background: ${({ theme }) => theme.colors.background};
     border: ${({ $mobile, theme }) => ($mobile ? `1px solid ${theme.colors.border}` : "none")};
     box-shadow: ${({ $mobile }) => ($mobile ? "0 18px 40px rgba(0,0,0,0.08)" : "none")};
     overflow: hidden;
+    container-type: inline-size;
+    container-name: preview;
+  }
+
+  /* Layout follows the preview frame, not the browser window. */
+  .preview-frame .home-first {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .preview-frame .home-hero-fill {
+    height: auto;
+    min-height: 280px;
+  }
+
+  .preview-frame .home-section-head h2,
+  .preview-frame .home-section-title {
+    font-size: clamp(1.7rem, 8cqi, 3.4rem);
+  }
+
+  .preview-frame .home-cat-tile.home-tile {
+    flex: 0 0 min(38cqi, 240px);
+    width: min(38cqi, 240px);
+  }
+
+  .preview-frame .home-rest {
+    padding-right: clamp(16px, 4cqi, 40px);
+    padding-left: clamp(16px, 4cqi, 40px);
+  }
+`;
+
+const previewLayoutCss = `
+  @container preview (max-width: 760px) {
+    .preview-frame .home-hero-fill {
+      grid-template-columns: 1fr;
+      min-height: min(68cqi, 520px);
+    }
+    .preview-frame .home-hero-fill > :nth-child(n + 2) {
+      display: none;
+    }
+    .preview-frame .home-cat-tile.home-tile {
+      flex: 0 0 72cqi;
+      width: 72cqi;
+    }
+    .preview-frame .home-rest {
+      padding: 8px 14px 0;
+    }
+    .preview-frame .product-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px 10px;
+    }
+    .preview-frame .home-section-head h2,
+    .preview-frame .home-section-title {
+      font-size: clamp(1.7rem, 12cqi, 2.6rem);
+    }
+  }
+
+  @container preview (min-width: 761px) and (max-width: 1099px) {
+    .preview-frame .home-hero-fill {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      min-height: 420px;
+    }
+    .preview-frame .home-hero-fill > :nth-child(2) {
+      display: block;
+    }
+    .preview-frame .home-hero-fill > :nth-child(n + 3) {
+      display: none;
+    }
+    .preview-frame .product-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 26px 18px;
+    }
+  }
+
+  @container preview (min-width: 1100px) {
+    .preview-frame .home-hero-fill {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      min-height: 520px;
+    }
+    .preview-frame .home-hero-fill > :nth-child(n) {
+      display: block;
+    }
+    .preview-frame .product-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 28px 20px;
+    }
   }
 `;
 
@@ -145,6 +232,7 @@ export function HomePagePreview({
           </AdminButton>
         </div>
       </Bar>
+      <style>{previewLayoutCss}</style>
       <Stage $mobile={mode === "mobile"}>
         <AppScrollArea className="preview-scroll" style={{ height: "100%" }}>
           <div className="preview-frame">

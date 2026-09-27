@@ -74,7 +74,6 @@ export function HomeView({ locale: localeProp, dict: dictProp, content, products
   const viewAll = homeCopy(content.texts.viewAll, locale);
   const hero = visibleTiles(content.hero);
   const categories = visibleTiles(content.categories);
-  const looks = visibleTiles(content.looks);
 
   return (
     <div>
@@ -133,16 +132,9 @@ export function HomeView({ locale: localeProp, dict: dictProp, content, products
           </section>
         ) : null}
 
-        {looks.length ? (
-          <section className="home-section">
-            <SectionHead title={homeCopy(content.texts.best, locale)} href={catalog} label={viewAll} />
-            <div className="home-tile-grid">
-              <Tiles tiles={looks} locale={locale} className="home-look-tile" />
-            </div>
-          </section>
-        ) : null}
-
-        {groups.map((group) => (
+        {groups
+          .filter((group) => !/^(sapogi|сапоги|boots)$/i.test(group.key.trim()))
+          .map((group) => (
           <section className="home-section" key={group.key}>
             <SectionHead title={formatGroupTitle(group.key)} href={catalog} label={viewAll} />
             <ProductGridMotion

@@ -331,7 +331,7 @@ export function ProductMediaGallery({ images, videos = [], videoUrl, title, labe
       $active={active === idx}
       onClick={() => select(idx)}
       aria-label={item.kind === "video" ? "Video" : `Image ${idx + 1}`}
-      aria-current={active === idx}
+      aria-current={active === idx ? "true" : undefined}
     >
       {item.kind === "image" ? (
         <OptimizedImage src={item.url} alt="" sizes="72px" objectFit="contain" />

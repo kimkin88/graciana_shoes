@@ -114,8 +114,11 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
   const [stock, setStock] = useState(String(product?.stock ?? 0));
   const [colors, setColors] = useState((product?.colors ?? []).join(", "));
   const [sizes, setSizes] = useState((product?.sizes ?? []).join(", "));
+  const [sizesMinsk, setSizesMinsk] = useState(product?.specs?.sizes_minsk ?? "");
+  const [sizesBrest, setSizesBrest] = useState(product?.specs?.sizes_brest ?? "");
   const [specs, setSpecs] = useState(
     Object.entries(product?.specs ?? {})
+      .filter(([key]) => key !== "sizes_minsk" && key !== "sizes_brest")
       .map(([k, v]) => `${k}: ${v}`)
       .join("\n"),
   );
@@ -627,6 +630,29 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
               placeholder={dict.admin.multiValueHint}
             />
           </Field>
+          <Row>
+            <Field>
+              <Label htmlFor="sizes_minsk">{dict.admin.sizesMinsk}</Label>
+              <Input
+                id="sizes_minsk"
+                name="sizes_minsk"
+                value={sizesMinsk}
+                onChange={(e) => setSizesMinsk(e.target.value)}
+                placeholder={dict.admin.multiValueHint}
+              />
+            </Field>
+            <Field>
+              <Label htmlFor="sizes_brest">{dict.admin.sizesBrest}</Label>
+              <Input
+                id="sizes_brest"
+                name="sizes_brest"
+                value={sizesBrest}
+                onChange={(e) => setSizesBrest(e.target.value)}
+                placeholder={dict.admin.multiValueHint}
+              />
+            </Field>
+          </Row>
+          <Hint style={{ marginTop: 0 }}>{dict.admin.sizesCityHint}</Hint>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input type="checkbox" name="featured" checked={featured} onChange={(e) => setFeatured(e.target.checked)} />

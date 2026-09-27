@@ -32,6 +32,8 @@ export default async function ProductsPage({
   const category = typeof sp.category === "string" ? sp.category : undefined;
   const color = typeof sp.color === "string" ? sp.color : undefined;
   const size = typeof sp.size === "string" ? sp.size : undefined;
+  const colors = color?.split(",").map((value) => value.trim()).filter(Boolean);
+  const sizes = size?.split(",").map((value) => value.trim()).filter(Boolean);
   const sort = typeof sp.sort === "string" ? sp.sort : "default";
   const min = majorToCents(typeof sp.min === "string" ? sp.min : undefined);
   const max = majorToCents(typeof sp.max === "string" ? sp.max : undefined);
@@ -39,7 +41,7 @@ export default async function ProductsPage({
   const dict = await getDictionary(locale);
   const supabase = await createClient();
   const [productsRaw, options] = await Promise.all([
-    fetchProducts(supabase, { search: q, category, color, size, minCents: min, maxCents: max }),
+    fetchProducts(supabase, { search: q, category, colors, sizes, minCents: min, maxCents: max }),
     fetchProductOptions(supabase),
   ]);
   const categories = STORE_CATEGORIES.map((item) => item.key);

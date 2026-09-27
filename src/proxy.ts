@@ -14,7 +14,7 @@ function pathnameHasLocale(pathname: string): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/api/")) {
+  if (pathname.startsWith("/api/") || pathname === "/robots.txt" || pathname === "/sitemap.xml") {
     return updateSession(request);
   }
 

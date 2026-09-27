@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { bepaidConfig, createBepaidCheckout } from "@/lib/bepaid/server";
 import { getStripeServer } from "@/lib/stripe/server";
 import { isLocale, type Locale } from "@/i18n/config";
 
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
           ? 409
           : 500;
       console.error(rpcErr);
-      return NextResponse.json({ error: "hold", detail: msg }, { status: code });
+      return NextResponse.json({ error: code === 409 ? "stock" : "hold" }, { status: code });
     }
 
     const pending = unwrapRpcUuid(rpcPending);
@@ -116,14 +117,60 @@ export async function POST(request: Request) {
 
     pendingId = pending;
 
-    const stripe = getStripeServer();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const currencies = new Set(
+      validated.map((row) => String(byId.get(row.product_id)?.currency || "byn").trim().toLowerCase()),
+    );
+    if (currencies.size !== 1) {
+      await service.rpc("release_checkout_hold", { p_pending_id: pendingId });
+      pendingId = null;
+      return NextResponse.json({ error: "currency" }, { status: 400 });
+    }
+    const currency = [...currencies][0]!;
+    const totalCents = validated.reduce((sum, row) => sum + row.unit_price_cents * row.quantity, 0);
+    const description = validated
+      .map((row) => {
+        const p = byId.get(row.product_id)!;
+        return locale === "en" ? p.name_en || p.name_ru : p.name_ru || p.name_en;
+      })
+      .filter(Boolean)
+      .join(", ");
 
+    if (bepaidConfig().configured) {
+      const hosted = await createBepaidCheckout({
+        amountCents: totalCents,
+        currency,
+        description: description || "Graciana",
+        trackingId: pendingId,
+        locale,
+        email: user?.email,
+        successUrl: `${appUrl}/${locale}/checkout/success?pending=${pendingId}`,
+        declineUrl: `${appUrl}/${locale}/checkout/result?status=declined&pending=${pendingId}`,
+        failUrl: `${appUrl}/${locale}/checkout/result?status=failed&pending=${pendingId}`,
+        cancelUrl: `${appUrl}/${locale}/cart`,
+        notificationUrl: `${appUrl}/api/webhooks/bepaid?locale=${locale}`,
+      });
+      const { error: uerr } = await service
+        .from("pending_checkouts")
+        .update({ stripe_session_id: hosted.token ? `bepaid-token:${hosted.token}` : null })
+        .eq("id", pendingId);
+      if (uerr) {
+        console.error(uerr);
+        throw uerr;
+      }
+      return NextResponse.json({ url: hosted.redirectUrl });
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      await service.rpc("release_checkout_hold", { p_pending_id: pendingId });
+      pendingId = null;
+      return NextResponse.json({ error: "payment" }, { status: 503 });
+    }
+
+    const stripe = getStripeServer();
     const checkoutLineItems = validated.map((row) => {
       const p = byId.get(row.product_id)!;
-      const name =
-        locale === "en" ? p.name_en || p.name_ru : p.name_ru || p.name_en;
-      const currency = String(p.currency || "byn").trim().toLowerCase();
+      const name = locale === "en" ? p.name_en || p.name_ru : p.name_ru || p.name_en;
       return {
         quantity: row.quantity,
         price_data: {
@@ -140,7 +187,7 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: checkoutLineItems,
-      success_url: `${appUrl}/${locale}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${appUrl}/${locale}/checkout/success?pending=${pendingId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/${locale}/cart`,
       customer_email: user?.email ?? undefined,
       metadata: {
@@ -170,7 +217,7 @@ export async function POST(request: Request) {
     }
     const message = e instanceof Error ? e.message : "";
     if (/currency|amount|invalid/i.test(message)) {
-      return NextResponse.json({ error: "stripe", detail: message }, { status: 400 });
+      return NextResponse.json({ error: "payment" }, { status: 400 });
     }
     return NextResponse.json({ error: "server" }, { status: 500 });
   }

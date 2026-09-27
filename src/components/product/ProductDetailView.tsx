@@ -9,8 +9,10 @@ import type { Messages } from "@/i18n/get-dictionary";
 import { localizedPath } from "@/i18n/routing";
 import { categoryLabel } from "@/lib/catalog/categories";
 import {
+  cityAvailability,
   discountPercent,
   parseSpecs,
+  publicSpecs,
   productGallery,
   productShortText,
   productTags,
@@ -276,7 +278,8 @@ export function ProductDetailView({ locale: localeProp, dict: dictProp, product,
   const inStock = product.stock > 0;
   const sale = discountPercent(product);
   const tags = productTags(product);
-  const specs = parseSpecs(product.specs);
+  const specs = publicSpecs(parseSpecs(product.specs));
+  const citySizes = cityAvailability(product);
   const images = productGallery(product);
   const category = categoryLabel(product.category, locale);
   const { addToCart, openDrawer } = useCart();
@@ -466,12 +469,26 @@ export function ProductDetailView({ locale: localeProp, dict: dictProp, product,
             {loved ? dict.products.unfavorite : dict.products.favorite}
           </FavBtn>
 
-          {description ? (
+          {description || citySizes.length ? (
             <details open style={{ marginTop: 6 }}>
               <summary style={{ cursor: "pointer", fontSize: "0.95rem", fontWeight: 600 }}>
                 {dict.product.description}
               </summary>
-              <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7, margin: "12px 0 0" }}>{description}</p>
+              {description ? (
+                <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7, margin: "12px 0 0" }}>{description}</p>
+              ) : null}
+              {citySizes.length ? (
+                <div style={{ marginTop: 14 }}>
+                  <p style={{ margin: "0 0 8px", fontWeight: 600 }}>{dict.product.sizeByCity}</p>
+                  <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+                    {citySizes.map((row) => (
+                      <li key={row.id}>
+                        {row.id === "minsk" ? dict.product.cityMinsk : dict.product.cityBrest}: {row.sizes}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </details>
           ) : null}
 
