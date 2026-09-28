@@ -160,11 +160,11 @@ export function CartView({ locale, dict }: Props) {
           </motion.div>
         );
       })}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "space-between", alignItems: "center" }}>
         <strong>
           {dict.cart.total}: {format(total.sum, total.currency, locale)}
         </strong>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           <Button type="button" $variant="ghost" onClick={clear}>
             {dict.cart.clearAll}
           </Button>

@@ -9,7 +9,12 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isAdmin } from "@/lib/auth/roles";
 import { isLocale, type Locale } from "@/i18n/config";
 import { localizedPath } from "@/i18n/routing";
-import { parseHomePage, type HomeMediaTile, type HomePageContent } from "@/lib/home/content";
+import {
+  applyTileSelection,
+  parseHomePage,
+  type HomeMediaTile,
+  type HomePageContent,
+} from "@/lib/home/content";
 import { PRODUCT_IMAGES_BUCKET, uploadHomeImage, uploadHomeVideo } from "@/lib/storage/media";
 
 function readLocale(formData: FormData): Locale {
@@ -70,9 +75,62 @@ async function fileFromExistingSrc(src: string, kind: "image" | "video"): Promis
   return null;
 }
 
+async function uploadAssetFile(
+  service: ReturnType<typeof createServiceClient>,
+  tile: HomeMediaTile,
+  assetId: string,
+  kind: "image" | "video",
+  file: File,
+) {
+  const folder = `${tile.id}/${assetId}`;
+  if (kind === "image") {
+    const uploaded = await uploadHomeImage(service, folder, file);
+    return uploaded.optimizedUrl;
+  }
+  const uploaded = await uploadHomeVideo(service, folder, file);
+  return uploaded.url;
+}
+
+async function applyLibraryUploads(
+  service: ReturnType<typeof createServiceClient>,
+  formData: FormData,
+  tile: HomeMediaTile,
+) {
+  const media = [...(tile.media ?? [])];
+  for (const asset of media) {
+    const file = formData.get(`asset_${tile.id}_${asset.id}`);
+    if (file instanceof File && file.size > 0) {
+      asset.src = await uploadAssetFile(service, tile, asset.id, asset.kind, file);
+      continue;
+    }
+    if (asset.src.startsWith("blob:") || asset.src.startsWith("data:")) {
+      asset.src = "";
+      continue;
+    }
+    const fromSrc = await fileFromExistingSrc(asset.src, asset.kind);
+    if (fromSrc) {
+      asset.src = await uploadAssetFile(service, tile, asset.id, asset.kind, fromSrc);
+    }
+  }
+  tile.media = media.filter((asset) => asset.src);
+  if (!tile.media.some((asset) => asset.id === tile.selectedMediaId)) {
+    tile.selectedMediaId = tile.media[0]?.id ?? "";
+  }
+  const selected = applyTileSelection(tile);
+  tile.src = selected.src;
+  tile.video = selected.video;
+}
+
 async function applyTileUploads(formData: FormData, tiles: HomeMediaTile[]) {
   const service = createServiceClient();
   for (const tile of tiles) {
+    if (tile.media?.length) {
+      await applyLibraryUploads(service, formData, tile);
+      if (tile.category) {
+        tile.href = `/products?category=${encodeURIComponent(tile.category)}`;
+      }
+      continue;
+    }
     const image = formData.get(`image_${tile.id}`);
     const video = formData.get(`video_${tile.id}`);
 

@@ -34,16 +34,18 @@ const Stack = styled.span`
 
 const Word = styled.span<{ $boxed?: boolean }>`
   display: inline-flex;
+  max-width: 100%;
   font-family: ${({ theme }) => theme.font.display};
-  font-size: ${({ $boxed }) => ($boxed ? "1.05rem" : "clamp(1.15rem, 4.2vw, 2.05rem)")};
+  font-size: ${({ $boxed }) => ($boxed ? "1.05rem" : "clamp(0.95rem, 3.6vw, 2.05rem)")};
   font-weight: 600;
-  letter-spacing: ${({ $boxed }) => ($boxed ? "0.34em" : "0.28em")};
+  letter-spacing: ${({ $boxed }) => ($boxed ? "0.28em" : "0.16em")};
   text-transform: uppercase;
   line-height: 1;
-  padding-right: 3em;
+  padding-left: ${({ $boxed }) => ($boxed ? "0.28em" : "0.16em")};
   @media (min-width: 760px) {
-    letter-spacing: ${({ $boxed }) => ($boxed ? "0.34em" : "0.36em")};
-    padding-right: 0em;
+    font-size: ${({ $boxed }) => ($boxed ? "1.05rem" : "clamp(1.35rem, 2.4vw, 2.05rem)")};
+    letter-spacing: ${({ $boxed }) => ($boxed ? "0.34em" : "0.32em")};
+    padding-left: ${({ $boxed }) => ($boxed ? "0.34em" : "0.32em")};
   }
 `;
 

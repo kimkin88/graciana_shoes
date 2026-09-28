@@ -40,7 +40,7 @@ export default async function SiteContentPage({
   }
 
   return (
-    <div style={{ display: "grid", gap: 16, maxWidth: 980 }}>
+    <div style={{ display: "grid", gap: 18, width: "100%", maxWidth: 1280, margin: "0 auto" }}>
       <h2 style={{ margin: 0 }}>{dict.admin.siteContent}</h2>
       <p style={{ margin: 0, color: "var(--page-text-muted)" }}>{dict.admin.siteContentHint}</p>
       {sp.saved ? <p style={{ margin: 0, color: "var(--page-text)" }}>{dict.admin.saved}</p> : null}

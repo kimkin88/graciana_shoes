@@ -46,7 +46,8 @@ export const AdminSectionTitle = styled.h2`
 export const AdminTableWrap = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.surface};
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 `;
 
 export const AdminTable = styled.table`

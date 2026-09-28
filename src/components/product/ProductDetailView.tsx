@@ -70,7 +70,9 @@ const Info = styled.div`
   gap: 16px;
   @media (min-width: 760px) {
     position: sticky;
-    top: calc(var(--header-h, 72px) + 16px);
+    top: calc(var(--header-h, 72px) + 12px);
+    max-height: calc(100dvh - var(--header-h, 72px) - 24px);
+    overflow: auto;
   }
 `;
 

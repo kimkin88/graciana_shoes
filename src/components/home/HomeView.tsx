@@ -8,6 +8,7 @@ import type { ProductRow } from "@/types";
 import { ProductGridMotion } from "@/components/motion/ProductGridMotion";
 import { RecentlyViewedStory } from "@/components/product/RecentlyViewedStory";
 import { LookTile } from "@/components/home/LookTile";
+import { HeroStage } from "@/components/home/HeroStage";
 import { WheelLockHScroll } from "@/components/ui/ScrollArea";
 import {
   homeCopy,
@@ -78,9 +79,12 @@ export function HomeView({ locale: localeProp, dict: dictProp, content, products
   return (
     <div>
       <section className="home-first">
-        <div className="home-hero-fill">
-          <Tiles tiles={hero} locale={locale} className="home-hero-panel" />
-        </div>
+        <HeroStage
+          tiles={hero.slice(0, content.heroCount || hero.length)}
+          locale={locale}
+          layout={content.heroLayout || "current"}
+          labels={{ previous: dict.home.heroPrev, next: dict.home.heroNext }}
+        />
         {ticker.length ? (
           <div className="home-marquee" aria-hidden>
             <div className="home-marquee-track">
@@ -95,19 +99,32 @@ export function HomeView({ locale: localeProp, dict: dictProp, content, products
       <div className="home-rest">
         {categories.length ? (
           <section className="home-section">
-            <WheelLockHScroll
-              className="home-hrow"
-              lockOnHover
-              lead={
+            {content.categoryLayout && content.categoryLayout !== "row" ? (
+              <>
                 <SectionHead
                   title={homeCopy(content.texts.popularCategories, locale)}
                   href={catalog}
                   label={viewAll}
                 />
-              }
-            >
-              <Tiles tiles={categories} locale={locale} className="home-cat-tile" />
-            </WheelLockHScroll>
+                <div className={`home-cat-layout home-cat-${content.categoryLayout}`}>
+                  <Tiles tiles={categories} locale={locale} className="home-cat-tile" />
+                </div>
+              </>
+            ) : (
+              <WheelLockHScroll
+                className="home-hrow"
+                lockOnHover
+                lead={
+                  <SectionHead
+                    title={homeCopy(content.texts.popularCategories, locale)}
+                    href={catalog}
+                    label={viewAll}
+                  />
+                }
+              >
+                <Tiles tiles={categories} locale={locale} className="home-cat-tile" />
+              </WheelLockHScroll>
+            )}
           </section>
         ) : null}
 

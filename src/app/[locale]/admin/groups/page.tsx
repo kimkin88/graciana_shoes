@@ -75,7 +75,7 @@ export default async function AdminGroupsPage({
                 <td style={{ padding: "8px 4px" }}>{productTitle(p, locale)}</td>
                 <td style={{ fontFamily: "monospace", fontSize: 12 }}>{p.slug}</td>
                 <td>
-                  <form action={updateProductGroup} style={{ display: "flex", gap: 8 }}>
+                  <form action={updateProductGroup} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     <input type="hidden" name="locale" value={locale} />
                     <input type="hidden" name="id" value={p.id} />
                     <input
@@ -83,7 +83,8 @@ export default async function AdminGroupsPage({
                       defaultValue={p.group_key ?? ""}
                       placeholder={dict.admin.groupKeyHint}
                       style={{
-                        minWidth: 220,
+                        minWidth: 0,
+                        width: "min(220px, 100%)",
                         padding: "8px 10px",
                         borderRadius: 8,
                         border: "1px solid #cbbeb0",

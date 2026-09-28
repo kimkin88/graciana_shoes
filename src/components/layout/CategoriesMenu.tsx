@@ -4,7 +4,7 @@ import Link from "next/link";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import styled from "styled-components";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
-import { AppScrollArea } from "@/components/ui/ScrollArea";
+import { anchoredPopperProps } from "@/components/ui/AppSelect";
 
 const Trigger = styled(DropdownMenu.Trigger)`
   border: 0;
@@ -32,11 +32,13 @@ const Trigger = styled(DropdownMenu.Trigger)`
 `;
 
 const Content = styled(DropdownMenu.Content)`
-  min-width: 240px;
+  z-index: 80;
+  min-width: min(240px, calc(100vw - 16px));
+  max-height: var(--radix-dropdown-menu-content-available-height);
+  overflow: auto;
   background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: ${({ theme }) => theme.shadows.md};
-  z-index: 60;
   padding: 6px 0;
 `;
 
@@ -70,17 +72,15 @@ export function CategoriesMenu({ label, allLabel, allHref, categories, categoryH
         <ChevronDownIcon width={12} height={12} />
       </Trigger>
       <DropdownMenu.Portal>
-        <Content align="start" sideOffset={14}>
-          <AppScrollArea style={{ maxHeight: 360 }}>
-            <DropdownMenu.Item asChild>
-              <ItemLink href={allHref}>{allLabel}</ItemLink>
+        <Content align="start" {...anchoredPopperProps}>
+          <DropdownMenu.Item asChild>
+            <ItemLink href={allHref}>{allLabel}</ItemLink>
+          </DropdownMenu.Item>
+          {categories.map((category) => (
+            <DropdownMenu.Item asChild key={category}>
+              <ItemLink href={categoryHref(category)}>{category}</ItemLink>
             </DropdownMenu.Item>
-            {categories.map((category) => (
-              <DropdownMenu.Item asChild key={category}>
-                <ItemLink href={categoryHref(category)}>{category}</ItemLink>
-              </DropdownMenu.Item>
-            ))}
-          </AppScrollArea>
+          ))}
         </Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

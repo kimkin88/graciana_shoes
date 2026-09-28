@@ -123,6 +123,19 @@ export function usePageScroll() {
   return useContext(PageScrollContext);
 }
 
+/** Nearest ancestor that can scroll vertically, ignoring the page shell. */
+function nestedScrollParent(node: HTMLElement | null, pageViewport: HTMLElement | null) {
+  let el = node?.parentElement ?? null;
+  while (el && el !== document.body && el !== document.documentElement) {
+    if (el !== pageViewport) {
+      const oy = getComputedStyle(el).overflowY;
+      if ((oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight + 1) return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
 /** Scroll the page shell (Radix viewport) or fall back to window. */
 export function scrollPageBy(deltaY: number, api?: PageScrollApi | null) {
   if (api) {
@@ -494,8 +507,13 @@ export function WheelLockHScroll({
         }
         current = left;
         target = left;
-        // Forward vertical wheel to the page Radix viewport (html no longer scrolls).
         event.preventDefault();
+        const pageViewport = pageScroll?.getViewport() ?? null;
+        const nested = nestedScrollParent(scroller, pageViewport);
+        if (nested) {
+          nested.scrollTop += event.deltaY;
+          return;
+        }
         scrollPageBy(event.deltaY, pageScroll);
         return;
       }

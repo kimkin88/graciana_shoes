@@ -1,7 +1,6 @@
 "use client";
 
 import * as Checkbox from "@radix-ui/react-checkbox";
-import * as Select from "@radix-ui/react-select";
 import * as Slider from "@radix-ui/react-slider";
 import { CheckIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { ChevronDown } from "lucide-react";
@@ -10,6 +9,7 @@ import { useCallback, useMemo, useState } from "react";
 import styled from "styled-components";
 import type { Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/get-dictionary";
+import { AppSelect } from "@/components/ui/AppSelect";
 import { Input } from "@/components/ui/Input";
 import { localizedPath } from "@/i18n/routing";
 import { categoryLabel } from "@/lib/catalog/categories";
@@ -183,63 +183,6 @@ const SearchInput = styled(Input)`
   box-sizing: border-box;
 `;
 
-const SelectTrigger = styled(Select.Trigger)`
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  height: 42px;
-  box-sizing: border-box;
-  padding: 0 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.md};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 0.86rem;
-  cursor: pointer;
-  outline: none;
-  &[data-placeholder] {
-    color: ${({ theme }) => theme.colors.textMuted};
-  }
-`;
-
-const SelectIcon = styled(Select.Icon)`
-  display: inline-flex;
-  color: ${({ theme }) => theme.colors.textMuted};
-  flex: 0 0 auto;
-`;
-
-const SelectContent = styled(Select.Content)`
-  overflow: hidden;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.md};
-  z-index: 60;
-  box-shadow: 0 12px 28px rgb(0 0 0 / 8%);
-  width: var(--radix-select-trigger-width);
-  min-width: var(--radix-select-trigger-width);
-`;
-
-const SelectViewport = styled(Select.Viewport)`
-  padding: 4px;
-`;
-
-const SelectItem = styled(Select.Item)`
-  padding: 10px 12px;
-  font-size: 0.86rem;
-  outline: none;
-  cursor: pointer;
-  border-radius: 2px;
-  color: ${({ theme }) => theme.colors.text};
-  &[data-highlighted] {
-    background: ${({ theme }) => theme.colors.accent};
-  }
-  &[data-state="checked"] {
-    font-weight: 600;
-  }
-`;
-
 const Actions = styled.div`
   display: flex;
   gap: 8px;
@@ -283,10 +226,6 @@ type Props = {
 };
 
 const PRICE_MAX_MAJOR = 30000;
-
-function Chevron() {
-  return <ChevronDown size={14} strokeWidth={1.75} aria-hidden />;
-}
 
 /** Left sidebar filters + search/sort toolbar around the product grid. */
 export function ProductFilters({
@@ -391,28 +330,16 @@ export function ProductFilters({
       <Sidebar $open={filtersOpen}>
         <Section>
           <SectionTitle>{dict.products.category}</SectionTitle>
-          <Select.Root value={category || "all"} onValueChange={(v) => setCategory(v === "all" ? "" : v)}>
-            <SelectTrigger aria-label={dict.products.category}>
-              <Select.Value placeholder={dict.products.allCategories} />
-              <SelectIcon>
-                <Chevron />
-              </SelectIcon>
-            </SelectTrigger>
-            <Select.Portal>
-              <SelectContent position="popper" side="bottom" align="start" sideOffset={4} avoidCollisions={false}>
-                <SelectViewport>
-                  <SelectItem value="all">
-                    <Select.ItemText>{dict.products.allCategories}</Select.ItemText>
-                  </SelectItem>
-                  {categories.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      <Select.ItemText>{categoryLabel(c, locale)}</Select.ItemText>
-                    </SelectItem>
-                  ))}
-                </SelectViewport>
-              </SelectContent>
-            </Select.Portal>
-          </Select.Root>
+          <AppSelect
+            ariaLabel={dict.products.category}
+            value={category || "all"}
+            placeholder={dict.products.allCategories}
+            onValueChange={(value) => setCategory(value === "all" ? "" : value)}
+            options={[
+              { value: "all", label: dict.products.allCategories },
+              ...categories.map((item) => ({ value: item, label: categoryLabel(item, locale) })),
+            ]}
+          />
         </Section>
 
         <Section>
@@ -507,8 +434,11 @@ export function ProductFilters({
             <SearchIcon width={16} height={16} />
           </SearchWrap>
           <SortWrap>
-            <Select.Root
+            <AppSelect
+              ariaLabel={dict.products.sort}
+              align="end"
               value={sort || "default"}
+              placeholder={dict.products.sortDefault}
               onValueChange={(value) => {
                 setSort(value);
                 const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -518,32 +448,13 @@ export function ProductFilters({
                 const target = pathname?.startsWith("/") ? pathname : baseList;
                 router.push(qs ? `${target}?${qs}` : target);
               }}
-            >
-              <SelectTrigger aria-label={dict.products.sort}>
-                <Select.Value placeholder={dict.products.sortDefault} />
-                <SelectIcon>
-                  <Chevron />
-                </SelectIcon>
-              </SelectTrigger>
-              <Select.Portal>
-                <SelectContent position="popper" side="bottom" align="end" sideOffset={4} avoidCollisions={false}>
-                  <SelectViewport>
-                    <SelectItem value="default">
-                      <Select.ItemText>{dict.products.sortDefault}</Select.ItemText>
-                    </SelectItem>
-                    <SelectItem value="price-asc">
-                      <Select.ItemText>{dict.products.sortPriceAsc}</Select.ItemText>
-                    </SelectItem>
-                    <SelectItem value="price-desc">
-                      <Select.ItemText>{dict.products.sortPriceDesc}</Select.ItemText>
-                    </SelectItem>
-                    <SelectItem value="new">
-                      <Select.ItemText>{dict.products.sortNew}</Select.ItemText>
-                    </SelectItem>
-                  </SelectViewport>
-                </SelectContent>
-              </Select.Portal>
-            </Select.Root>
+              options={[
+                { value: "default", label: dict.products.sortDefault },
+                { value: "price-asc", label: dict.products.sortPriceAsc },
+                { value: "price-desc", label: dict.products.sortPriceDesc },
+                { value: "new", label: dict.products.sortNew },
+              ]}
+            />
           </SortWrap>
         </Toolbar>
         {children}

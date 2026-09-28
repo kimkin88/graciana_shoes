@@ -377,7 +377,7 @@ function QuickViewContent({
               {current ? (
                 <OptimizedImage src={current} alt={title} sizes="(max-width: 860px) 80vw, 240px" objectFit="contain" />
               ) : null}
-              <div style={{ position: "absolute", top: 8, left: 8, display: "flex", gap: 6 }}>
+              <div style={{ position: "absolute", top: 8, left: 8, right: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {sale ? <ProductBadge tone="sale">-{sale}%</ProductBadge> : null}
                 {!inStock ? <ProductBadge tone="out">{dict.products.outOfStock}</ProductBadge> : null}
               </div>

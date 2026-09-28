@@ -5,11 +5,14 @@ import styled from "styled-components";
 const Mark = styled.span<{ $tone: "sale" | "new" | "out" }>`
   display: inline-flex;
   align-items: center;
-  letter-spacing: 0.12em;
+  max-width: 100%;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 0.62rem;
   font-weight: 700;
+  line-height: 1.35;
   padding: 5px 8px;
+  white-space: normal;
   background: ${({ $tone, theme }) =>
     $tone === "sale" ? theme.colors.text : $tone === "out" ? "transparent" : theme.colors.accent};
   color: ${({ $tone, theme }) => ($tone === "sale" ? theme.colors.background : theme.colors.text)};

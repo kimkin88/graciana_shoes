@@ -3,6 +3,12 @@ import { HOME_CATEGORY_TILES, HOME_HERO_PANELS, HOME_LOOKS } from "@/lib/home/ed
 
 export type BiText = { ru: string; en: string };
 
+export type HomeMediaAsset = {
+  id: string;
+  kind: "image" | "video";
+  src: string;
+};
+
 export type HomeMediaTile = {
   id: string;
   src: string;
@@ -11,6 +17,9 @@ export type HomeMediaTile = {
   labelEn: string;
   href: string;
   category?: string;
+  /** Library for this slot. The storefront shows the selected asset. */
+  media?: HomeMediaAsset[];
+  selectedMediaId?: string;
 };
 
 export type HomePageTexts = {
@@ -24,16 +33,40 @@ export type HomePageTexts = {
   newsletterCta: BiText;
 };
 
+export const HERO_LAYOUTS = ["current", "grid", "carousel", "strip"] as const;
+export type HeroLayout = (typeof HERO_LAYOUTS)[number];
+
+export function isHeroLayout(value: unknown): value is HeroLayout {
+  return typeof value === "string" && (HERO_LAYOUTS as readonly string[]).includes(value);
+}
+
+export const CATEGORY_LAYOUTS = ["row", "mosaic", "columns", "cards"] as const;
+export type CategoryLayout = (typeof CATEGORY_LAYOUTS)[number];
+
+export function isCategoryLayout(value: unknown): value is CategoryLayout {
+  return typeof value === "string" && (CATEGORY_LAYOUTS as readonly string[]).includes(value);
+}
+
+export type HeroCount = 1 | 2 | 3;
+
+export function isHeroCount(value: unknown): value is HeroCount {
+  return value === 1 || value === 2 || value === 3;
+}
+
 export type HomePageContent = {
   v: 2;
   texts: HomePageTexts;
   marquee: BiText;
+  heroLayout: HeroLayout;
+  /** How many of the saved hero tiles the storefront shows. The rest stay in the editor. */
+  heroCount: HeroCount;
   hero: HomeMediaTile[];
+  categoryLayout: CategoryLayout;
   categories: HomeMediaTile[];
   looks: HomeMediaTile[];
 };
 
-const HERO_COUNT = 3;
+export const HERO_SLOT_MAX = 3;
 
 function tileFromEditorial(
   id: string,
@@ -71,6 +104,9 @@ export function defaultHomePage(): HomePageContent {
       ru: "Бесплатная доставка при заказе от 250 BYN\nМодная женская обувь с доставкой по Беларуси.\nGRACIANA Женская Обувь",
       en: "Free shipping on orders over 250 BYN\nFashion footwear with delivery across Belarus.\nGRACIANA Women's Shoes",
     },
+    heroLayout: "current",
+    heroCount: 3,
+    categoryLayout: "row",
     hero: HOME_HERO_PANELS.map((tile, i) => tileFromEditorial(`hero-${i + 1}`, tile)),
     categories: HOME_CATEGORY_TILES.map((tile, i) => tileFromEditorial(`cat-${i + 1}`, tile)),
     looks: HOME_LOOKS.map((tile, i) => tileFromEditorial(`look-${i + 1}`, tile)),
@@ -91,13 +127,71 @@ function asBiText(value: unknown, fallback: BiText): BiText {
   };
 }
 
+function safeId(value: string, fallback: string) {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80) || fallback;
+}
+
+function asAssetList(value: unknown): HomeMediaAsset[] {
+  if (!Array.isArray(value)) return [];
+  const assets: HomeMediaAsset[] = [];
+  for (const [index, item] of value.entries()) {
+    const row = asRecord(item);
+    if (!row) continue;
+    const src = typeof row.src === "string" ? row.src.trim() : "";
+    const kind = row.kind === "video" || row.kind === "image" ? row.kind : "";
+    if (!src || !kind) continue;
+    const id = safeId(typeof row.id === "string" ? row.id.trim() : "", `asset-${index + 1}`);
+    assets.push({ id, kind, src });
+  }
+  return assets;
+}
+
+/** Copy the chosen library item into the fields the storefront reads. */
+export function applyTileSelection(tile: HomeMediaTile): HomeMediaTile {
+  const selected = tile.media?.find((asset) => asset.id === tile.selectedMediaId);
+  if (!selected) return { ...tile, src: "", video: "" };
+  if (selected.kind === "video") return { ...tile, src: "", video: selected.src };
+  return { ...tile, src: selected.src, video: "" };
+}
+
+/** Keep older single image/video fields and the newer library in sync. */
+export function ensureTileLibrary(tile: HomeMediaTile): HomeMediaTile {
+  const media: HomeMediaAsset[] = [];
+  const seen = new Set<string>();
+  const push = (asset: HomeMediaAsset) => {
+    if (!asset.src) return;
+    const key = `${asset.kind}:${asset.src}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    media.push(asset);
+  };
+  for (const asset of tile.media ?? []) push(asset);
+  if (tile.src) push({ id: `${tile.id}-image`, kind: "image", src: tile.src });
+  if (tile.video) push({ id: `${tile.id}-video`, kind: "video", src: tile.video });
+  const selected =
+    media.find((asset) => asset.id === tile.selectedMediaId) ??
+    (tile.video ? media.find((asset) => asset.kind === "video" && asset.src === tile.video) : undefined) ??
+    (tile.src ? media.find((asset) => asset.kind === "image" && asset.src === tile.src) : undefined) ??
+    media[0];
+  return applyTileSelection({ ...tile, media, selectedMediaId: selected?.id ?? "" });
+}
+
+/** Keep every saved tile. Raise the count by adding empty slots, never by deleting. */
+export function withHeroCount(hero: HomeMediaTile[], count: number): { hero: HomeMediaTile[]; heroCount: HeroCount } {
+  const heroCount: HeroCount = isHeroCount(count) ? count : 3;
+  const tiles = hero.map(ensureTileLibrary);
+  while (tiles.length < heroCount) tiles.push(ensureTileLibrary(newHomeTile()));
+  return { hero: tiles, heroCount };
+}
+
 function asTile(value: unknown, fallbackId: string): HomeMediaTile | null {
   const row = asRecord(value);
   if (!row) return null;
   const src = typeof row.src === "string" ? row.src.trim() : "";
   const video = typeof row.video === "string" ? row.video.trim() : "";
-  const idRaw = typeof row.id === "string" ? row.id.trim() : fallbackId;
-  const id = idRaw.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80) || fallbackId;
+  const id = safeId(typeof row.id === "string" ? row.id.trim() : "", fallbackId);
+  const media = asAssetList(row.media);
+  const selectedMediaId = safeId(typeof row.selectedMediaId === "string" ? row.selectedMediaId.trim() : "", "");
   return {
     id,
     src,
@@ -106,6 +200,8 @@ function asTile(value: unknown, fallbackId: string): HomeMediaTile | null {
     labelEn: typeof row.labelEn === "string" ? row.labelEn : "",
     href: typeof row.href === "string" && row.href.trim() ? row.href.trim() : "/products",
     category: typeof row.category === "string" ? row.category.trim() : "",
+    media: media.length ? media : undefined,
+    selectedMediaId: selectedMediaId || undefined,
   };
 }
 
@@ -127,11 +223,8 @@ export function parseHomePage(raw: unknown): HomePageContent {
   const row = asRecord(raw);
   if (!row || row.v !== 2) return defaults;
 
-  const hero = asTileList(row.hero, defaults.hero);
-  while (hero.length < HERO_COUNT) {
-    const next = defaults.hero[hero.length];
-    hero.push(next ? { ...next, id: `hero-${hero.length + 1}` } : newHomeTile(`hero-${hero.length + 1}`));
-  }
+  const savedHero = asTileList(row.hero, defaults.hero).slice(0, HERO_SLOT_MAX).map(ensureTileLibrary);
+  const hero = savedHero.length ? savedHero : defaults.hero.map(ensureTileLibrary);
 
   return {
     v: 2,
@@ -146,7 +239,10 @@ export function parseHomePage(raw: unknown): HomePageContent {
       newsletterCta: asBiText(asRecord(row.texts)?.newsletterCta, defaults.texts.newsletterCta),
     },
     marquee: asBiText(row.marquee, defaults.marquee),
-    hero: hero.slice(0, HERO_COUNT),
+    heroLayout: isHeroLayout(row.heroLayout) ? row.heroLayout : "current",
+    heroCount: isHeroCount(row.heroCount) ? row.heroCount : hero.length === 1 || hero.length === 2 ? hero.length : 3,
+    hero,
+    categoryLayout: isCategoryLayout(row.categoryLayout) ? row.categoryLayout : "row",
     categories: useSavedCategories(asTileList(row.categories, defaults.categories), defaults.categories),
     looks: asTileList(row.looks, defaults.looks),
   };

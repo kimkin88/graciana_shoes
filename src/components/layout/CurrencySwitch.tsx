@@ -2,37 +2,9 @@
 
 import styled from "styled-components";
 import type { Locale } from "@/i18n/config";
+import { AppSelect } from "@/components/ui/AppSelect";
 import { useCurrency } from "@/context/currency-context";
 import { STOREFRONT_CURRENCIES } from "@/lib/money/fx";
-
-const Select = styled.select<{ $onDark?: boolean }>`
-  border: 1px solid
-    ${({ theme, $onDark }) => ($onDark ? "rgb(246 243 238 / 28%)" : theme.colors.border)};
-  background: ${({ $onDark }) => ($onDark ? "transparent" : "transparent")};
-  color: ${({ theme, $onDark }) => ($onDark ? "#f6f3ee" : "inherit")};
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  padding: 8px 10px;
-  max-width: 14rem;
-  appearance: none;
-  background-image: ${({ $onDark }) =>
-    $onDark
-      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23f6f3ee' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")`
-      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23111111' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")`};
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  padding-right: 28px;
-  transition: border-color 0.18s ease, background-color 0.18s ease;
-  &:hover {
-    border-color: ${({ theme, $onDark }) => ($onDark ? "rgb(246 243 238 / 55%)" : theme.colors.text)};
-  }
-  option {
-    color: #111;
-    background: #fff;
-  }
-`;
 
 const Pills = styled.div`
   display: inline-flex;
@@ -102,19 +74,17 @@ export function CurrencySwitch({ locale, variant = "select", label, tone = "defa
 
   if (variant === "select") {
     return (
-      <Select
-        $onDark={onDark}
-        aria-label="Currency"
-        title={date ? `NBRB ${date}` : "NBRB"}
+      <AppSelect
+        size="compact"
+        tone={onDark ? "onDark" : "default"}
+        ariaLabel="Currency"
         value={displayCurrency}
-        onChange={(e) => setDisplayCurrency(e.target.value)}
-      >
-        {STOREFRONT_CURRENCIES.map((item) => (
-          <option key={item.code} value={item.code}>
-            {item.symbol} {locale === "en" ? item.en : item.ru}
-          </option>
-        ))}
-      </Select>
+        onValueChange={setDisplayCurrency}
+        options={STOREFRONT_CURRENCIES.map((item) => ({
+          value: item.code,
+          label: `${item.symbol} ${locale === "en" ? item.en : item.ru}`,
+        }))}
+      />
     );
   }
 

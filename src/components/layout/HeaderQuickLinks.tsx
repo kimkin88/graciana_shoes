@@ -20,7 +20,8 @@ const Row = styled.div`
     justify-content: center;
     flex-wrap: nowrap;
     gap: 10px;
-    padding: 10px 24px 14px;
+    max-width: 100%;
+    padding: 10px 88px 14px 24px;
     border-top: 1px solid ${({ theme }) => theme.colors.border};
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

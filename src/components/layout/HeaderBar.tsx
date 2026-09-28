@@ -39,6 +39,7 @@ import { BrandLogo } from "@/components/layout/BrandLogo";
 import { HeaderQuickLinks } from "@/components/layout/HeaderQuickLinks";
 import { CurrencySwitch } from "@/components/layout/CurrencySwitch";
 import { AppScrollArea } from "@/components/ui/ScrollArea";
+import { anchoredPopperProps } from "@/components/ui/AppSelect";
 import { categoryLabel, STORE_CATEGORIES } from "@/lib/catalog/categories";
 
 const Shell = styled.header`
@@ -57,7 +58,7 @@ const Top = styled.div`
   margin: 0 auto;
   padding: 10px 12px 8px;
   display: grid;
-  grid-template-columns: minmax(40px, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -79,11 +80,12 @@ const Social = styled.a`
   letter-spacing: 0.1em;
   color: ${({ theme }) => theme.colors.textMuted};
   justify-self: start;
+  min-width: 0;
   transition: color 0.18s ease;
   &:hover {
     color: ${({ theme }) => theme.colors.text};
   }
-  @media (min-width: 900px) {
+  @media (min-width: 1024px) {
     display: inline-flex;
   }
 `;
@@ -113,7 +115,7 @@ const BrandWrap = styled.div`
   justify-self: center;
   grid-column: 2;
   min-width: 0;
-  max-width: min(52vw, 280px);
+  max-width: 100%;
 `;
 
 const Right = styled.div`
@@ -253,8 +255,10 @@ const GuestLogin = styled(Link)`
 `;
 
 const AccountMenu = styled(DropdownMenu.Content)`
-  min-width: 220px;
-  z-index: 70;
+  z-index: 80;
+  min-width: min(220px, calc(100vw - 16px));
+  max-height: var(--radix-dropdown-menu-content-available-height);
+  overflow: auto;
   padding: 6px 0;
   background: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.border};
@@ -683,7 +687,7 @@ export function HeaderBar({ locale: localeProp, dict: dictProp, userEmail, isAdm
                 <OnlineDot aria-hidden />
               </AccountTrigger>
               <DropdownMenu.Portal>
-                <AccountMenu align="end" sideOffset={8}>
+                <AccountMenu align="end" {...anchoredPopperProps}>
                   <AccountHead>
                     <AccountStatus>
                       <span
