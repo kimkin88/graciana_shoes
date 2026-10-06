@@ -9,7 +9,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { localizedPath } from "@/i18n/routing";
 import { deleteProductFolder } from "@/lib/storage/media";
 import { centsFromMajor, parseGallery, textToSpecs } from "@/lib/products/commerce";
-import { isNumericSlug, isUuid } from "@/lib/products/slugify";
+import { isNumericSlug, isUuid, nextAvailableSlug } from "@/lib/products/slugify";
 import type { GalleryItem } from "@/types";
 
 const slugRe = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -185,6 +185,24 @@ function fail(locale: Locale, path: string, code: string): never {
   redirect(`${localizedPath(path, locale)}?error=${code}`);
 }
 
+type ServiceClient = ReturnType<typeof createServiceClient>;
+
+async function allocateUniqueSlug(service: ServiceClient, desired: string, excludeId?: string) {
+  const base = desired.trim().toLowerCase() || "product";
+  const { data, error } = await service
+    .from("products")
+    .select("id, slug")
+    .or(`slug.eq.${base},slug.like.${base}-%`);
+  if (error) {
+    console.error("[allocateUniqueSlug]", error);
+    return nextAvailableSlug(base, []);
+  }
+  const taken = (data ?? [])
+    .filter((row) => row.id !== excludeId)
+    .map((row) => String(row.slug ?? ""));
+  return nextAvailableSlug(base, taken);
+}
+
 async function upsertTaxonomy(
   service: ReturnType<typeof createServiceClient>,
   fields: { category: string | null; group_key: string | null; tags: string[] },
@@ -257,31 +275,37 @@ export async function createProduct(formData: FormData) {
 
   // Never persist a bare numeric slug — replace with UUID after insert if needed.
   const wantsUuidSlug = isNumericSlug(fields.slug) || fields.slug === "product";
+  const slug = wantsUuidSlug ? `tmp-${Date.now()}` : await allocateUniqueSlug(service, fields.slug);
   const insertPayload = {
     ...fields,
     id: productIdForMedia,
-    slug: wantsUuidSlug ? `tmp-${Date.now()}` : fields.slug,
+    slug,
     image_original_path: directMedia.image_original_path,
     image_optimized_path: directMedia.image_optimized_path,
     video_path: directMedia.video_path,
   };
 
   let productId: string | undefined;
-  const first = await service.from("products").insert(insertPayload).select("id").single();
+  let first = await service.from("products").insert(insertPayload).select("id").single();
+  if (first.error?.code === "23505" && !wantsUuidSlug) {
+    insertPayload.slug = await allocateUniqueSlug(service, fields.slug);
+    first = await service.from("products").insert(insertPayload).select("id").single();
+  }
   if (first.error && isMissingColumn(first.error)) {
-    const retry = await service
-      .from("products")
-      .insert({ ...withoutExtendedFields(fields), id: productIdForMedia })
-      .select("id")
-      .single();
+    const retryPayload = { ...withoutExtendedFields(fields), id: productIdForMedia, slug: insertPayload.slug };
+    let retry = await service.from("products").insert(retryPayload).select("id").single();
+    if (retry.error?.code === "23505") {
+      retryPayload.slug = await allocateUniqueSlug(service, fields.slug);
+      retry = await service.from("products").insert(retryPayload).select("id").single();
+    }
     if (retry.error || !retry.data?.id) {
       console.error(retry.error);
-      fail(locale, "/admin/products/new", retry.error?.code === "23505" ? "duplicate" : "db");
+      fail(locale, "/admin/products/new", "db");
     }
     productId = retry.data.id;
   } else if (first.error || !first.data?.id) {
     console.error(first.error);
-    fail(locale, "/admin/products/new", first.error?.code === "23505" ? "duplicate" : "db");
+    fail(locale, "/admin/products/new", "db");
   } else {
     productId = first.data.id;
   }
@@ -360,7 +384,9 @@ export async function updateProduct(formData: FormData) {
   }
 
   const slug =
-    isNumericSlug(fields.slug) || fields.slug === "product" || !fields.slug ? id : fields.slug;
+    isNumericSlug(fields.slug) || fields.slug === "product" || !fields.slug
+      ? id
+      : await allocateUniqueSlug(service, fields.slug, id);
   const patch: Record<string, unknown> = { ...fields, slug };
   const directMedia = uploadedMedia(formData, id);
   const gallery = keptGallery(fields.gallery);
@@ -396,9 +422,16 @@ export async function updateProduct(formData: FormData) {
       console.error(retry.error);
       fail(locale, `/admin/products/${id}/edit`, "db");
     }
+  } else if (error?.code === "23505") {
+    patch.slug = await allocateUniqueSlug(service, String(patch.slug ?? fields.slug), id);
+    const again = await service.from("products").update(patch).eq("id", id);
+    if (again.error) {
+      console.error(again.error);
+      fail(locale, `/admin/products/${id}/edit`, "db");
+    }
   } else if (error) {
     console.error(error);
-    fail(locale, `/admin/products/${id}/edit`, error.code === "23505" ? "duplicate" : "db");
+    fail(locale, `/admin/products/${id}/edit`, "db");
   }
 
   await upsertTaxonomy(service, fields);

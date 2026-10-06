@@ -71,3 +71,17 @@ export function productUrlSlug(name: string, productId: string) {
   if (!base || isNumericSlug(base)) return productId;
   return base;
 }
+
+/** Pick `base`, then `base-2`, `base-3`, … until the value is not in `taken`. */
+export function nextAvailableSlug(base: string, taken: Iterable<string>) {
+  const used = new Set(
+    [...taken].map((value) => value.trim().toLowerCase()).filter(Boolean),
+  );
+  const clean = (base.trim().toLowerCase() || "product").slice(0, 72);
+  if (!used.has(clean)) return clean;
+  for (let n = 2; n < 1000; n += 1) {
+    const candidate = `${clean.slice(0, 68)}-${n}`;
+    if (!used.has(candidate)) return candidate;
+  }
+  return `${clean.slice(0, 56)}-${Date.now().toString(36)}`;
+}

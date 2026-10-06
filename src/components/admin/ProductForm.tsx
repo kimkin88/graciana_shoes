@@ -2,11 +2,12 @@
 
 import { createProduct, updateProduct } from "@/app/actions/admin-products";
 import { DownloadIcon, FilePlusIcon, VideoIcon } from "@radix-ui/react-icons";
+import { Loader2 } from "lucide-react";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useMemo, useRef, useState } from "react";
 import { FileUploader } from "react-drag-drop-files";
 import ReactPlayer from "react-player";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import type { Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/get-dictionary";
 import type { ProductRow } from "@/types";
@@ -108,6 +109,18 @@ const Actions = styled.div`
     background: none;
     padding: 0;
   }
+`;
+
+const spin = keyframes`
+  to {
+    transform: rotate(360deg);
+  }
+`;
+
+const ButtonSpinner = styled(Loader2)`
+  width: 14px;
+  height: 14px;
+  animation: ${spin} 0.7s linear infinite;
 `;
 
 const StatusBanner = styled.p<{ $tone: "info" | "error" }>`
@@ -1115,20 +1128,53 @@ export function ProductForm({
             </Field>
           </Row>
         </Section>
+        </FormBody>
 
         <Actions>
-          <AdminButton type="submit" name="intent" value="publish" disabled={pending}>
-            {pending && submitIntent === "publish"
-              ? phaseLabel ?? dict.admin.saving
-              : dict.admin.publish}
+          <AdminButton
+            type="submit"
+            name="intent"
+            value="publish"
+            disabled={pending}
+            aria-busy={pending && submitIntent === "publish"}
+            style={pending && submitIntent === "publish" ? { opacity: 1 } : undefined}
+            onClick={() => {
+              setSubmitIntent("publish");
+              setPhase((current) => (current === "idle" ? "validating" : current));
+            }}
+          >
+            {pending && submitIntent === "publish" ? (
+              <>
+                <ButtonSpinner aria-hidden />
+                {phaseLabel ?? dict.admin.saving}
+              </>
+            ) : (
+              dict.admin.publish
+            )}
           </AdminButton>
-          <AdminButton type="submit" name="intent" value="draft" $variant="ghost" disabled={pending}>
-            {pending && submitIntent === "draft"
-              ? phaseLabel ?? dict.admin.saving
-              : dict.admin.saveDraft}
+          <AdminButton
+            type="submit"
+            name="intent"
+            value="draft"
+            $variant="ghost"
+            disabled={pending}
+            aria-busy={pending && submitIntent === "draft"}
+            style={pending && submitIntent === "draft" ? { opacity: 1 } : undefined}
+            onClick={() => {
+              setSubmitIntent("draft");
+              setPhase((current) => (current === "idle" ? "validating" : current));
+            }}
+          >
+            {pending && submitIntent === "draft" ? (
+              <>
+                <ButtonSpinner aria-hidden />
+                {phaseLabel ?? dict.admin.saving}
+              </>
+            ) : (
+              dict.admin.saveDraft
+            )}
           </AdminButton>
         </Actions>
-        </FormBody>
       </form>
       </FormColumn>
 
