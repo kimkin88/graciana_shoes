@@ -81,7 +81,7 @@ const Stage = styled.div<{ $mobile?: boolean }>`
   .preview-frame {
     margin: 0 auto;
     width: 100%;
-    max-width: none;
+    max-width: ${({ $mobile }) => ($mobile ? "390px" : "none")};
     background: ${({ theme }) => theme.colors.background};
     border: ${({ $mobile, theme }) => ($mobile ? `1px solid ${theme.colors.border}` : "none")};
     box-shadow: ${({ $mobile }) => ($mobile ? "0 18px 40px rgba(0,0,0,0.08)" : "none")};
@@ -120,6 +120,23 @@ const Stage = styled.div<{ $mobile?: boolean }>`
   .preview-frame .home-cat-cards .home-cat-tile.home-tile {
     flex: none;
     width: 100%;
+  }
+
+  /* Override viewport @media category rules from GlobalStyles — preview uses container width. */
+  .preview-frame .home-cat-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .preview-frame .home-cat-mosaic {
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: minmax(140px, 46cqi);
+  }
+  .preview-frame .home-cat-mosaic .home-cat-tile.home-tile:first-child {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .preview-frame .home-cat-cards .home-cat-tile.home-tile {
+    aspect-ratio: 2 / 1;
   }
 
   .preview-frame .home-rest {
@@ -186,6 +203,24 @@ const previewLayoutCss = `
     }
   }
 
+  @container preview (min-width: 900px) {
+    .preview-frame .home-cat-columns {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .preview-frame .home-cat-mosaic {
+      grid-template-columns: 1.5fr 1fr 1fr;
+      grid-auto-rows: minmax(180px, 16cqi);
+    }
+    .preview-frame .home-cat-mosaic .home-cat-tile.home-tile:first-child {
+      grid-column: auto;
+      grid-row: span 2;
+      aspect-ratio: auto;
+    }
+    .preview-frame .home-cat-cards .home-cat-tile.home-tile {
+      aspect-ratio: 16 / 6;
+    }
+  }
+
   @container preview (min-width: 1100px) {
     .preview-frame .home-hero-fill {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -197,6 +232,12 @@ const previewLayoutCss = `
     .preview-frame .product-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 28px 20px;
+    }
+    .preview-frame .home-cat-columns {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .preview-frame .home-cat-cards .home-cat-tile.home-tile {
+      aspect-ratio: 16 / 5;
     }
   }
 

@@ -63,12 +63,26 @@ function Tiles({
   );
 }
 
+function takeCatalogProducts(featured: ProductRow[], products: ProductRow[], limit = 8) {
+  const seen = new Set<string>();
+  const out: ProductRow[] = [];
+  for (const list of [featured, products]) {
+    for (const product of list) {
+      if (seen.has(product.id)) continue;
+      seen.add(product.id);
+      out.push(product);
+      if (out.length >= limit) return out;
+    }
+  }
+  return out;
+}
+
 export function HomeView({ locale: localeProp, dict: dictProp, content, products, featured, groups }: Props) {
   const i18n = useI18nOptional();
   const locale = i18n?.locale ?? localeProp;
   const dict = i18n?.dict ?? dictProp;
   const catalog = localizeHref("/products", locale);
-  const lookbook = featured.length ? featured : products.slice(0, 8);
+  const lookbook = takeCatalogProducts(featured, products, 8);
   const featuredIds = new Set(lookbook.map((p) => p.id));
   const rest = products.filter((p) => !featuredIds.has(p.id)).slice(0, 8);
   const ticker = marqueeLines(content.marquee, locale);

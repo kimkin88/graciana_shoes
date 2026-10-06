@@ -390,20 +390,22 @@ const Badge = styled.span`
   line-height: 1;
 `;
 
-const CatalogBtn = styled(Link)`
+const CatalogBtn = styled.button<{ $open?: boolean }>`
   display: none;
   box-sizing: border-box;
   height: 36px;
   padding: 0 14px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  border: 1px solid ${({ theme, $open }) => ($open ? theme.colors.text : theme.colors.border)};
   border-radius: ${({ theme }) => theme.radii.md};
-  color: ${({ theme }) => theme.colors.textMuted};
+  background: ${({ theme, $open }) => ($open ? theme.colors.accent : "transparent")};
+  color: ${({ theme, $open }) => ($open ? theme.colors.text : theme.colors.textMuted)};
   font-size: 0.62rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 600;
   line-height: 1;
   flex: 0 0 auto;
+  cursor: pointer;
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   &:hover {
     background: ${({ theme }) => theme.colors.accent};
@@ -445,6 +447,10 @@ const Overlay = styled.div<{ $open: boolean }>`
   pointer-events: ${({ $open }) => ($open ? "auto" : "none")};
   transition: opacity 0.28s ease;
   z-index: 70;
+  @media (min-width: 1024px) {
+    top: var(--header-h, 72px);
+    background: rgb(0 0 0 / 28%);
+  }
 `;
 
 const Panel = styled.aside<{ $open: boolean }>`
@@ -456,12 +462,49 @@ const Panel = styled.aside<{ $open: boolean }>`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text};
   transform: translateX(${({ $open }) => ($open ? "0" : "-102%")});
-  transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease;
   z-index: 80;
   display: grid;
   grid-template-rows: auto 1fr auto;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
+
+  /* Desktop: full-width catalog row under the header (mega menu). */
+  @media (min-width: 1024px) {
+    top: var(--header-h, 72px);
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height: min(70vh, 560px);
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    box-shadow: ${({ theme }) => theme.shadows.md};
+    transform: translateY(${({ $open }) => ($open ? "0" : "-10px")});
+    opacity: ${({ $open }) => ($open ? 1 : 0)};
+    pointer-events: ${({ $open }) => ($open ? "auto" : "none")};
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+`;
+
+const CategoryRow = styled.div`
+  display: grid;
+  gap: 0;
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 4px 20px;
+    margin: 4px 0 8px;
+    width: 100%;
+  }
+`;
+
+const MobileOnlyBlock = styled.div`
+  display: contents;
+  @media (min-width: 1024px) {
+    display: none;
+  }
 `;
 
 const PanelHead = styled.div`
@@ -470,6 +513,9 @@ const PanelHead = styled.div`
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  @media (min-width: 1024px) {
+    padding: 14px clamp(20px, 4vw, 48px);
+  }
 `;
 
 const PanelTitle = styled.p`
@@ -490,6 +536,13 @@ const PanelLink = styled(Link)`
   &:hover {
     opacity: 0.62;
   }
+  ${CategoryRow} & {
+    @media (min-width: 1024px) {
+      padding: 10px 0;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+    }
+  }
 `;
 
 const PanelSection = styled.p`
@@ -498,6 +551,9 @@ const PanelSection = styled.p`
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: ${({ theme }) => theme.colors.textMuted};
+  @media (min-width: 1024px) {
+    margin: 10px 0 4px;
+  }
 `;
 
 const GhostBtn = styled.button`
@@ -676,7 +732,15 @@ export function HeaderBar({ locale: localeProp, dict: dictProp, userEmail, isAdm
               EN
             </LangBtn>
           </LangGroup>
-          <CatalogBtn href={mk("/products")}>{dict.nav.catalogPlus}</CatalogBtn>
+          <CatalogBtn
+            type="button"
+            $open={menuOpen}
+            aria-expanded={menuOpen}
+            aria-controls="header-catalog-panel"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {dict.nav.catalogPlus}
+          </CatalogBtn>
           {userEmail ? (
             <DropdownMenu.Root modal={false}>
               <AccountTrigger
@@ -740,27 +804,33 @@ export function HeaderBar({ locale: localeProp, dict: dictProp, userEmail, isAdm
       <HeaderQuickLinks items={quickLinks} ariaLabel={dict.nav.catalog} />
 
       <Overlay $open={menuOpen} onClick={close} />
-      <Panel $open={menuOpen} aria-hidden={!menuOpen}>
+      <Panel id="header-catalog-panel" $open={menuOpen} aria-hidden={!menuOpen}>
         <PanelHead>
           <PanelTitle>{dict.nav.catalogPlus}</PanelTitle>
           <IconBtn type="button" aria-label={dict.common.closeMenu} onClick={close}>
             <X size={18} strokeWidth={iconStroke} />
           </IconBtn>
         </PanelHead>
-        <AppScrollArea style={{ height: "100%" }} viewportStyle={{ padding: "8px 24px 28px" }}>
+        <AppScrollArea
+          style={{ height: "100%", minHeight: 0 }}
+          viewportStyle={{ padding: "8px clamp(20px, 4vw, 48px) 28px" }}
+        >
           <PanelLink href={mk("/products")} onClick={close}>
             {dict.nav.catalog}
           </PanelLink>
           <PanelSection>{dict.nav.categories}</PanelSection>
-          {navCategories.map((item) => (
-            <PanelLink
-              key={item.key}
-              href={`${mk("/products")}?category=${encodeURIComponent(item.key)}`}
-              onClick={close}
-            >
-              {categoryLabel(item.key, locale)}
-            </PanelLink>
-          ))}
+          <CategoryRow>
+            {navCategories.map((item) => (
+              <PanelLink
+                key={item.key}
+                href={`${mk("/products")}?category=${encodeURIComponent(item.key)}`}
+                onClick={close}
+              >
+                {categoryLabel(item.key, locale)}
+              </PanelLink>
+            ))}
+          </CategoryRow>
+          <MobileOnlyBlock>
           <PanelSection>{dict.info.customerTitle}</PanelSection>
           <PanelLink href={mk("/how-to-order")} onClick={close}>
             {dict.nav.howToOrder}
@@ -839,44 +909,47 @@ export function HeaderBar({ locale: localeProp, dict: dictProp, userEmail, isAdm
               </PanelLink>
             </>
           )}
+          </MobileOnlyBlock>
         </AppScrollArea>
-        <PanelFoot>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <LangGroup $always>
-              <LangBtn type="button" $active={locale === "ru"} onClick={() => switchLocale("ru")}>
-                RU
-              </LangBtn>
-              <LangBtn type="button" $active={locale === "en"} onClick={() => switchLocale("en")}>
-                EN
-              </LangBtn>
-            </LangGroup>
-            <ThemeToggle compact />
-            <CurrencySwitch locale={locale} variant="pills" />
-          </div>
-          <div style={{ fontSize: "0.8rem", color: "var(--page-text-muted)" }}>
-            <div>{dict.info.phones.join(" / ")}</div>
-            <div>{dict.info.email}</div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <SocialLink href="https://www.instagram.com/graciana_shoes_by/" target="_blank" rel="noreferrer" aria-label="Instagram">
-              <InstagramLogoIcon width={16} height={16} />
-            </SocialLink>
-            <SocialLink
-              href="https://api.whatsapp.com/send/?phone=375297460114&text&type=phone_number&app_absent=0"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="WhatsApp"
-            >
-              <MessageCircle size={16} strokeWidth={iconStroke} />
-            </SocialLink>
-            <SocialLink href="https://t.me/graciana_shoes_by" target="_blank" rel="noreferrer" aria-label="Telegram">
-              <Send size={16} strokeWidth={iconStroke} />
-            </SocialLink>
-            <SocialLink href="viber://chat?number=%2B375297460114" aria-label="Viber">
-              <Phone size={16} strokeWidth={iconStroke} />
-            </SocialLink>
-          </div>
-        </PanelFoot>
+        <MobileOnlyBlock>
+          <PanelFoot>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <LangGroup $always>
+                <LangBtn type="button" $active={locale === "ru"} onClick={() => switchLocale("ru")}>
+                  RU
+                </LangBtn>
+                <LangBtn type="button" $active={locale === "en"} onClick={() => switchLocale("en")}>
+                  EN
+                </LangBtn>
+              </LangGroup>
+              <ThemeToggle compact />
+              <CurrencySwitch locale={locale} variant="pills" />
+            </div>
+            <div style={{ fontSize: "0.8rem", color: "var(--page-text-muted)" }}>
+              <div>{dict.info.phones.join(" / ")}</div>
+              <div>{dict.info.email}</div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <SocialLink href="https://www.instagram.com/graciana_shoes_by/" target="_blank" rel="noreferrer" aria-label="Instagram">
+                <InstagramLogoIcon width={16} height={16} />
+              </SocialLink>
+              <SocialLink
+                href="https://api.whatsapp.com/send/?phone=375297460114&text&type=phone_number&app_absent=0"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="WhatsApp"
+              >
+                <MessageCircle size={16} strokeWidth={iconStroke} />
+              </SocialLink>
+              <SocialLink href="https://t.me/graciana_shoes_by" target="_blank" rel="noreferrer" aria-label="Telegram">
+                <Send size={16} strokeWidth={iconStroke} />
+              </SocialLink>
+              <SocialLink href="viber://chat?number=%2B375297460114" aria-label="Viber">
+                <Phone size={16} strokeWidth={iconStroke} />
+              </SocialLink>
+            </div>
+          </PanelFoot>
+        </MobileOnlyBlock>
       </Panel>
     </Shell>
   );
