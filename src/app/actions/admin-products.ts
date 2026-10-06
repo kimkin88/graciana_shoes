@@ -174,6 +174,19 @@ function parseProductFields(formData: FormData) {
   };
 }
 
+function uploadedPath(formData: FormData, key: string, productId: string) {
+  const value = String(formData.get(key) ?? "").trim();
+  return value.startsWith(`${productId}/`) && !value.includes("..") ? value : null;
+}
+
+function uploadedMedia(formData: FormData, productId: string) {
+  return {
+    image_original_path: uploadedPath(formData, "image_original_path", productId),
+    image_optimized_path: uploadedPath(formData, "image_optimized_path", productId),
+    video_path: uploadedPath(formData, "video_path", productId),
+  };
+}
+
 function fail(locale: Locale, path: string, code: string): never {
   redirect(`${localizedPath(path, locale)}?error=${code}`);
 }
@@ -264,6 +277,9 @@ export async function createProduct(formData: FormData) {
   if (!(await isAdmin(supabase))) redirect(localizedPath("/", locale));
   const service = createServiceClient();
   const fields = parseProductFields(formData);
+  const requestedId = String(formData.get("product_id") ?? "");
+  const productIdForMedia = isUuid(requestedId) ? requestedId : crypto.randomUUID();
+  const directMedia = uploadedMedia(formData, productIdForMedia);
   if (!isValidProductSlug(fields.slug)) fail(locale, "/admin/products/new", "slug");
   if (!fields.name_ru || !fields.name_en || !Number.isFinite(fields.price_cents) || fields.price_cents < 1) {
     fail(locale, "/admin/products/new", "fields");
@@ -276,16 +292,21 @@ export async function createProduct(formData: FormData) {
   const wantsUuidSlug = isNumericSlug(fields.slug) || fields.slug === "product";
   const insertPayload = {
     ...fields,
+    id: productIdForMedia,
     slug: wantsUuidSlug ? `tmp-${Date.now()}` : fields.slug,
-    image_original_path: null,
-    image_optimized_path: null,
-    video_path: null,
+    image_original_path: directMedia.image_original_path,
+    image_optimized_path: directMedia.image_optimized_path,
+    video_path: directMedia.video_path,
   };
 
   let productId: string | undefined;
   const first = await service.from("products").insert(insertPayload).select("id").single();
   if (first.error && isMissingColumn(first.error)) {
-    const retry = await service.from("products").insert(withoutExtendedFields(fields)).select("id").single();
+    const retry = await service
+      .from("products")
+      .insert({ ...withoutExtendedFields(fields), id: productIdForMedia })
+      .select("id")
+      .single();
     if (retry.error || !retry.data?.id) {
       console.error(retry.error);
       fail(locale, "/admin/products/new", "db");
@@ -309,6 +330,15 @@ export async function createProduct(formData: FormData) {
   const mediaPatch: Record<string, unknown> = {};
 
   try {
+    if (directMedia.image_original_path && directMedia.image_optimized_path) {
+      mediaPatch.image_original_path = directMedia.image_original_path;
+      mediaPatch.image_optimized_path = directMedia.image_optimized_path;
+      mediaPatch.image_url = fields.image_url;
+    }
+    if (directMedia.video_path) {
+      mediaPatch.video_path = directMedia.video_path;
+      mediaPatch.video_url = fields.video_url;
+    }
     if (imageFile instanceof File && imageFile.size > 0) {
       const image = await uploadProductImage(service, productId, imageFile);
       mediaPatch.image_original_path = image.originalPath;
@@ -324,7 +354,7 @@ export async function createProduct(formData: FormData) {
     }
     const gallery = await applyGalleryUploads(service, productId, formData, fields.gallery);
     mediaPatch.gallery = gallery;
-    if (!(videoFile instanceof File && videoFile.size > 0)) {
+    if (!(videoFile instanceof File && videoFile.size > 0) && !directMedia.video_path) {
       Object.assign(mediaPatch, syncPrimaryVideo(gallery, fields));
     }
   } catch (err) {
@@ -377,10 +407,20 @@ export async function updateProduct(formData: FormData) {
   const slug =
     isNumericSlug(fields.slug) || fields.slug === "product" || !fields.slug ? id : fields.slug;
   const patch: Record<string, unknown> = { ...fields, slug };
+  const directMedia = uploadedMedia(formData, id);
   const imageFile = formData.get("image_file");
   const videoFile = formData.get("video_file");
 
   try {
+    if (directMedia.image_original_path && directMedia.image_optimized_path) {
+      patch.image_original_path = directMedia.image_original_path;
+      patch.image_optimized_path = directMedia.image_optimized_path;
+      patch.image_url = fields.image_url;
+    }
+    if (directMedia.video_path) {
+      patch.video_path = directMedia.video_path;
+      patch.video_url = fields.video_url;
+    }
     if (imageFile instanceof File && imageFile.size > 0) {
       const image = await uploadProductImage(service, id, imageFile);
       patch.image_original_path = image.originalPath;
@@ -396,7 +436,7 @@ export async function updateProduct(formData: FormData) {
     }
     const gallery = await applyGalleryUploads(service, id, formData, fields.gallery);
     patch.gallery = gallery;
-    if (!(videoFile instanceof File && videoFile.size > 0)) {
+    if (!(videoFile instanceof File && videoFile.size > 0) && !directMedia.video_path) {
       Object.assign(patch, syncPrimaryVideo(gallery, fields));
     }
   } catch (err) {

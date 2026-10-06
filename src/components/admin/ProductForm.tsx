@@ -13,6 +13,7 @@ import { AdminButton } from "@/components/admin/AdminButtons";
 import { ProductPreview } from "@/components/admin/ProductPreview";
 import { Field, Input, Label, TextArea } from "@/components/ui/Input";
 import { productCardImage, productOriginalImage } from "@/lib/products/media";
+import { uploadProductMedia } from "@/lib/storage/client-product-media";
 import { STORE_CATEGORIES } from "@/lib/catalog/categories";
 import { ADMIN_CURRENCIES } from "@/lib/money/fx";
 import { centsFromMajor, majorFromCents, parseGallery } from "@/lib/products/commerce";
@@ -87,7 +88,7 @@ const Actions = styled.div`
 
 /** Shared bilingual admin form — posts to the matching server action. */
 export function ProductForm({ mode, locale, dict, product, knownTags = [], knownGroups = [] }: Props) {
-  const action = mode === "create" ? createProduct : updateProduct;
+  const serverAction = mode === "create" ? createProduct : updateProduct;
   const initialImage = product ? productCardImage(product) ?? "" : "";
   const originalImage = product ? productOriginalImage(product) ?? "" : "";
   const initialVideo = product?.video_url ?? "";
@@ -152,6 +153,7 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
   const galleryVideosRef = useRef<HTMLInputElement | null>(null);
   const pendingGalleryImages = useRef<File[]>([]);
   const pendingGalleryVideos = useRef<File[]>([]);
+  const uploadProductId = useRef(product?.id ?? "");
 
   const galleryJson = useMemo(
     () =>
@@ -267,6 +269,50 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
     setGalleryPreviews([]);
   }
 
+  async function submitProduct(formData: FormData) {
+    setPending(true);
+    setMediaHint("");
+    try {
+      if (!uploadProductId.current) uploadProductId.current = crypto.randomUUID();
+      const keptGallery = galleryPreviews
+        .filter((item) => !item.url.startsWith("blob:") && !item.url.startsWith("data:"))
+        .map((item) => ({ url: item.url, path: item.path, kind: item.kind }));
+      const media = await uploadProductMedia({
+        productId: uploadProductId.current,
+        image: imageInputRef.current?.files?.[0] ?? null,
+        video: videoInputRef.current?.files?.[0] ?? null,
+        galleryImages: pendingGalleryImages.current,
+        galleryVideos: pendingGalleryVideos.current,
+        keptGallery,
+      });
+
+      // Only small strings reach the Server Action; media bytes go straight to Storage.
+      formData.delete("image_file");
+      formData.delete("image_drop");
+      formData.delete("video_file");
+      formData.delete("video_drop");
+      formData.delete("gallery_files");
+      formData.delete("gallery_videos");
+      formData.set("product_id", uploadProductId.current);
+      formData.set("gallery_json", JSON.stringify(media.gallery));
+      if (media.image) {
+        formData.set("image_original_path", media.image.originalPath);
+        formData.set("image_optimized_path", media.image.optimizedPath);
+        formData.set("image_url", media.image.url);
+      }
+      if (media.video) {
+        formData.set("video_path", media.video.path);
+        formData.set("video_url", media.video.url);
+      }
+
+      await serverAction(formData);
+    } catch (error) {
+      console.error("[ProductForm:submit]", error);
+      setMediaHint(dict.admin.mediaUploadError);
+      setPending(false);
+    }
+  }
+
   async function validateMediaUrl(url: string, label: string) {
     if (!url.trim()) return;
     try {
@@ -347,12 +393,7 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
   return (
     <Layout>
       <form
-        action={action}
-        onSubmit={() => {
-          setPending(true);
-          syncFileInput(galleryInputRef.current, pendingGalleryImages.current);
-          syncFileInput(galleryVideosRef.current, pendingGalleryVideos.current);
-        }}
+        action={submitProduct}
       >
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="gallery_json" value={galleryJson} />
