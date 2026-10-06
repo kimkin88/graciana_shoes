@@ -27,7 +27,7 @@ import { isNumericSlug, isUuid, slugify } from "@/lib/products/slugify";
 import { httpClient } from "@/lib/http/client";
 
 type Mode = "create" | "edit";
-type FormPhase = "idle" | "validating" | "uploading" | "saving";
+type FormPhase = "idle" | "uploading" | "saving";
 type FieldKey = "name_ru" | "name_en" | "slug" | "price_major" | "compare_at_major";
 
 type Props = {
@@ -235,7 +235,70 @@ export function ProductForm({
   const pendingGalleryVideos = useRef<File[]>([]);
   const uploadProductId = useRef(product?.id ?? "");
   const formTopRef = useRef<HTMLDivElement | null>(null);
+  const submittingRef = useRef(false);
   const pending = phase !== "idle";
+
+  function fillFormDataFromState(formData: FormData, intent: "publish" | "draft") {
+    formData.set("locale", locale);
+    formData.set("intent", intent);
+    formData.set("name_ru", nameRu);
+    formData.set("name_en", nameEn);
+    formData.set("slug", slug);
+    formData.set("sku", sku);
+    formData.set("source_url", sourceUrl);
+    formData.set("manufacturer", manufacturer);
+    formData.set("model", model);
+    formData.set("short_description_ru", shortRu);
+    formData.set("short_description_en", shortEn);
+    formData.set("description_ru", descRu);
+    formData.set("description_en", descEn);
+    formData.set("category", category);
+    formData.set("group_key", groupKey);
+    formData.set("tags", tags);
+    formData.set("price_major", priceMajor);
+    formData.set("compare_at_major", compareMajor);
+    formData.set("currency", currency);
+    formData.set("stock", stock);
+    formData.set("colors", colors);
+    formData.set("sizes", sizes);
+    formData.set("sizes_minsk", sizesMinsk);
+    formData.set("sizes_brest", sizesBrest);
+    formData.set("specs", specs);
+    formData.set("image_url", imageUrl);
+    formData.set("video_url", videoUrl);
+    formData.set("seo_title_ru", seoTitleRu);
+    formData.set("seo_title_en", seoTitleEn);
+    formData.set("seo_description_ru", seoDescRu);
+    formData.set("seo_description_en", seoDescEn);
+    if (featured) formData.set("featured", "on");
+    else formData.delete("featured");
+    if (active) formData.set("active", "on");
+    else formData.delete("active");
+    if (mode === "edit" && product) formData.set("id", product.id);
+  }
+
+  function isAppRedirect(error: unknown) {
+    if (isRedirectError(error)) return true;
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "digest" in error &&
+      String((error as { digest?: string }).digest).startsWith("NEXT_REDIRECT")
+    );
+  }
+
+  function hasPendingMedia() {
+    return Boolean(
+      imageInputRef.current?.files?.[0] ||
+        videoInputRef.current?.files?.[0] ||
+        pendingGalleryImages.current.length ||
+        pendingGalleryVideos.current.length,
+    );
+  }
+
+  function startSubmit(intent: "publish" | "draft") {
+    setSubmitIntent(intent);
+  }
 
   const galleryJson = useMemo(
     () =>
@@ -403,13 +466,16 @@ export function ProductForm({
   }
 
   async function submitProduct(formData: FormData) {
-    const intent = String(formData.get("intent") ?? "publish") === "draft" ? "draft" : "publish";
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    const intent =
+      submitIntent ?? (String(formData.get("intent") ?? "publish") === "draft" ? "draft" : "publish");
     setSubmitIntent(intent);
     setFormError(null);
     setMediaHint("");
-    setPhase("validating");
 
     if (!validateForm()) {
+      submittingRef.current = false;
       setPhase("idle");
       setSubmitIntent(null);
       setFormError(dict.admin.fixAndRetry);
@@ -418,18 +484,15 @@ export function ProductForm({
       return;
     }
 
+    fillFormDataFromState(formData, intent);
+
     try {
       if (!uploadProductId.current) uploadProductId.current = crypto.randomUUID();
       const keptGallery = galleryPreviews
         .filter((item) => !item.url.startsWith("blob:") && !item.url.startsWith("data:"))
         .map((item) => ({ url: item.url, path: item.path, kind: item.kind }));
-      const hasMedia =
-        Boolean(imageInputRef.current?.files?.[0]) ||
-        Boolean(videoInputRef.current?.files?.[0]) ||
-        pendingGalleryImages.current.length > 0 ||
-        pendingGalleryVideos.current.length > 0;
-
-      if (hasMedia) setPhase("uploading");
+      const hasMedia = hasPendingMedia();
+      setPhase(hasMedia ? "uploading" : "saving");
       const media = await uploadProductMedia({
         productId: uploadProductId.current,
         image: imageInputRef.current?.files?.[0] ?? null,
@@ -439,7 +502,6 @@ export function ProductForm({
         keptGallery,
       });
 
-      // Only small strings reach the Server Action; media bytes go straight to Storage.
       stripFilesFromFormData(formData);
       formData.set("product_id", uploadProductId.current);
       formData.set("gallery_json", JSON.stringify(media.gallery));
@@ -456,7 +518,7 @@ export function ProductForm({
       setPhase("saving");
       await serverAction(formData);
     } catch (error) {
-      if (isRedirectError(error)) throw error;
+      if (isAppRedirect(error)) throw error;
       console.error("[ProductForm:submit]", error);
       const code = error instanceof Error ? error.message : "media";
       const message = productFormErrorMessage(code, dict) ?? dict.admin.saveError;
@@ -466,17 +528,17 @@ export function ProductForm({
       setPhase("idle");
       setSubmitIntent(null);
       formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } finally {
+      submittingRef.current = false;
     }
   }
 
   const phaseLabel =
-    phase === "validating"
-      ? dict.admin.formValidating
-      : phase === "uploading"
-        ? dict.admin.formUploading
-        : phase === "saving"
-          ? dict.admin.formSaving
-          : null;
+    phase === "uploading"
+      ? dict.admin.formUploading
+      : phase === "saving"
+        ? dict.admin.formSaving
+        : null;
 
   async function validateMediaUrl(url: string, label: string) {
     if (!url.trim()) return;
@@ -568,18 +630,10 @@ export function ProductForm({
             {formError}
           </StatusBanner>
         ) : null}
-      <form
-        action={submitProduct}
-        aria-busy={pending}
-        onSubmit={(event) => {
-          if (pending) {
-            event.preventDefault();
-            toast({ variant: "error", title: dict.admin.formBlocked });
-          }
-        }}
-      >
-        <FormBody disabled={pending}>
+      <form action={submitProduct} aria-busy={pending}>
+        <FormBody>
         <input type="hidden" name="locale" value={locale} />
+        <input type="hidden" name="intent" value={submitIntent ?? "publish"} />
         <input type="hidden" name="gallery_json" value={galleryJson} />
         {mode === "edit" && product ? <input type="hidden" name="id" value={product.id} /> : null}
 
@@ -1138,10 +1192,7 @@ export function ProductForm({
             disabled={pending}
             aria-busy={pending && submitIntent === "publish"}
             style={pending && submitIntent === "publish" ? { opacity: 1 } : undefined}
-            onClick={() => {
-              setSubmitIntent("publish");
-              setPhase((current) => (current === "idle" ? "validating" : current));
-            }}
+            onClick={() => startSubmit("publish")}
           >
             {pending && submitIntent === "publish" ? (
               <>
@@ -1160,10 +1211,7 @@ export function ProductForm({
             disabled={pending}
             aria-busy={pending && submitIntent === "draft"}
             style={pending && submitIntent === "draft" ? { opacity: 1 } : undefined}
-            onClick={() => {
-              setSubmitIntent("draft");
-              setPhase((current) => (current === "idle" ? "validating" : current));
-            }}
+            onClick={() => startSubmit("draft")}
           >
             {pending && submitIntent === "draft" ? (
               <>

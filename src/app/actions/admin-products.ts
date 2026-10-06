@@ -188,19 +188,19 @@ function fail(locale: Locale, path: string, code: string): never {
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
 async function allocateUniqueSlug(service: ServiceClient, desired: string, excludeId?: string) {
-  const base = desired.trim().toLowerCase() || "product";
-  const { data, error } = await service
-    .from("products")
-    .select("id, slug")
-    .or(`slug.eq.${base},slug.like.${base}-%`);
-  if (error) {
-    console.error("[allocateUniqueSlug]", error);
-    return nextAvailableSlug(base, []);
+  const base = (desired.trim().toLowerCase() || "product").slice(0, 72);
+  const taken: string[] = [];
+  for (let n = 0; n < 80; n += 1) {
+    const candidate = n === 0 ? base : `${base.slice(0, 68)}-${n + 1}`;
+    const { data, error } = await service.from("products").select("id").eq("slug", candidate).maybeSingle();
+    if (error) {
+      console.error("[allocateUniqueSlug]", error);
+      return `${base.slice(0, 56)}-${Date.now().toString(36)}`;
+    }
+    if (!data || data.id === excludeId) return nextAvailableSlug(candidate, taken);
+    taken.push(candidate);
   }
-  const taken = (data ?? [])
-    .filter((row) => row.id !== excludeId)
-    .map((row) => String(row.slug ?? ""));
-  return nextAvailableSlug(base, taken);
+  return `${base.slice(0, 56)}-${Date.now().toString(36)}`;
 }
 
 async function upsertTaxonomy(
@@ -287,27 +287,38 @@ export async function createProduct(formData: FormData) {
 
   let productId: string | undefined;
   let first = await service.from("products").insert(insertPayload).select("id").single();
-  if (first.error?.code === "23505" && !wantsUuidSlug) {
-    insertPayload.slug = await allocateUniqueSlug(service, fields.slug);
-    first = await service.from("products").insert(insertPayload).select("id").single();
+  if (first.error?.code === "23505") {
+    const { data: existing } = await service
+      .from("products")
+      .select("id")
+      .eq("id", productIdForMedia)
+      .maybeSingle();
+    if (existing?.id) {
+      productId = existing.id;
+    } else if (!wantsUuidSlug) {
+      insertPayload.slug = await allocateUniqueSlug(service, fields.slug);
+      first = await service.from("products").insert(insertPayload).select("id").single();
+    }
   }
-  if (first.error && isMissingColumn(first.error)) {
-    const retryPayload = { ...withoutExtendedFields(fields), id: productIdForMedia, slug: insertPayload.slug };
-    let retry = await service.from("products").insert(retryPayload).select("id").single();
-    if (retry.error?.code === "23505") {
-      retryPayload.slug = await allocateUniqueSlug(service, fields.slug);
-      retry = await service.from("products").insert(retryPayload).select("id").single();
-    }
-    if (retry.error || !retry.data?.id) {
-      console.error(retry.error);
+  if (!productId) {
+    if (first.error && isMissingColumn(first.error)) {
+      const retryPayload = { ...withoutExtendedFields(fields), id: productIdForMedia, slug: insertPayload.slug };
+      let retry = await service.from("products").insert(retryPayload).select("id").single();
+      if (retry.error?.code === "23505") {
+        retryPayload.slug = await allocateUniqueSlug(service, fields.slug);
+        retry = await service.from("products").insert(retryPayload).select("id").single();
+      }
+      if (retry.error || !retry.data?.id) {
+        console.error(retry.error);
+        fail(locale, "/admin/products/new", "db");
+      }
+      productId = retry.data.id;
+    } else if (first.error || !first.data?.id) {
+      console.error(first.error);
       fail(locale, "/admin/products/new", "db");
+    } else {
+      productId = first.data.id;
     }
-    productId = retry.data.id;
-  } else if (first.error || !first.data?.id) {
-    console.error(first.error);
-    fail(locale, "/admin/products/new", "db");
-  } else {
-    productId = first.data.id;
   }
   if (!productId) fail(locale, "/admin/products/new", "db");
 
