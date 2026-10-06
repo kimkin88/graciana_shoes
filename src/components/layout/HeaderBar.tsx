@@ -54,11 +54,12 @@ const Shell = styled.header`
 `;
 
 const Top = styled.div`
-  max-width: 1440px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   padding: 10px 12px 8px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  /* Equal side tracks keep the logo on the true screen center. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -67,9 +68,18 @@ const Top = styled.div`
     gap: 10px;
   }
   @media (min-width: 1024px) {
-    padding: 16px 32px 12px;
+    padding: 16px 20px 12px;
     gap: 12px;
   }
+`;
+
+const Left = styled.div`
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 `;
 
 const Social = styled.a`
@@ -79,7 +89,6 @@ const Social = styled.a`
   font-size: 0.7rem;
   letter-spacing: 0.1em;
   color: ${({ theme }) => theme.colors.textMuted};
-  justify-self: start;
   min-width: 0;
   transition: color 0.18s ease;
   &:hover {
@@ -101,7 +110,6 @@ const Burger = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  justify-self: start;
   transition: background 0.18s ease;
   &:hover {
     background: ${({ theme }) => theme.colors.accent};
@@ -115,15 +123,18 @@ const BrandWrap = styled.div`
   justify-self: center;
   grid-column: 2;
   min-width: 0;
-  max-width: 100%;
+  max-width: min(100%, 420px);
+  text-align: center;
 `;
 
 const Right = styled.div`
   justify-self: end;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 2px;
   min-width: 0;
+  max-width: 100%;
   flex-wrap: nowrap;
   height: 36px;
   @media (min-width: 900px) {
@@ -695,13 +706,15 @@ export function HeaderBar({ locale: localeProp, dict: dictProp, userEmail, isAdm
   return (
     <Shell ref={shellRef}>
       <Top>
-        <Burger type="button" aria-label={dict.common.openMenu} aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}>
-          <Menu size={18} strokeWidth={iconStroke} />
-        </Burger>
-        <Social href="https://t.me/graciana_shoes_by" target="_blank" rel="noreferrer">
-          <Send size={13} strokeWidth={iconStroke} />
-          @graciana_shoes_by
-        </Social>
+        <Left>
+          <Burger type="button" aria-label={dict.common.openMenu} aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}>
+            <Menu size={18} strokeWidth={iconStroke} />
+          </Burger>
+          <Social href="https://t.me/graciana_shoes_by" target="_blank" rel="noreferrer">
+            <Send size={13} strokeWidth={iconStroke} />
+            @graciana_shoes_by
+          </Social>
+        </Left>
         <BrandWrap>
           <BrandLogo href={mk("/")} withSub sub={dict.nav.brandSub} />
         </BrandWrap>

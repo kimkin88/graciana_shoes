@@ -53,6 +53,26 @@ export function isHeroCount(value: unknown): value is HeroCount {
   return value === 1 || value === 2 || value === 3;
 }
 
+/** How many products the homepage Catalog section shows. */
+export const CATALOG_COUNTS = [4, 8, 12, 16, 20, 24] as const;
+export type CatalogCount = (typeof CATALOG_COUNTS)[number];
+
+export function isCatalogCount(value: unknown): value is CatalogCount {
+  return typeof value === "number" && (CATALOG_COUNTS as readonly number[]).includes(value);
+}
+
+export function normalizeCatalogCount(value: unknown, fallback: CatalogCount = 8): CatalogCount {
+  if (isCatalogCount(value)) return value;
+  const n = typeof value === "string" ? Number.parseInt(value, 10) : typeof value === "number" ? value : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  const rounded = Math.round(n);
+  let best: CatalogCount = fallback;
+  for (const option of CATALOG_COUNTS) {
+    if (Math.abs(option - rounded) < Math.abs(best - rounded)) best = option;
+  }
+  return best;
+}
+
 export type HomePageContent = {
   v: 2;
   texts: HomePageTexts;
@@ -62,6 +82,8 @@ export type HomePageContent = {
   heroCount: HeroCount;
   hero: HomeMediaTile[];
   categoryLayout: CategoryLayout;
+  /** How many products the Catalog grid shows on the homepage. */
+  catalogCount: CatalogCount;
   categories: HomeMediaTile[];
   looks: HomeMediaTile[];
 };
@@ -107,6 +129,7 @@ export function defaultHomePage(): HomePageContent {
     heroLayout: "current",
     heroCount: 3,
     categoryLayout: "row",
+    catalogCount: 8,
     hero: HOME_HERO_PANELS.map((tile, i) => tileFromEditorial(`hero-${i + 1}`, tile)),
     categories: HOME_CATEGORY_TILES.map((tile, i) => tileFromEditorial(`cat-${i + 1}`, tile)),
     looks: HOME_LOOKS.map((tile, i) => tileFromEditorial(`look-${i + 1}`, tile)),
@@ -243,6 +266,7 @@ export function parseHomePage(raw: unknown): HomePageContent {
     heroCount: isHeroCount(row.heroCount) ? row.heroCount : hero.length === 1 || hero.length === 2 ? hero.length : 3,
     hero,
     categoryLayout: isCategoryLayout(row.categoryLayout) ? row.categoryLayout : "row",
+    catalogCount: normalizeCatalogCount(row.catalogCount, defaults.catalogCount),
     categories: useSavedCategories(asTileList(row.categories, defaults.categories), defaults.categories),
     looks: asTileList(row.looks, defaults.looks),
   };

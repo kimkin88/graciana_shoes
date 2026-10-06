@@ -82,7 +82,7 @@ export function HomeView({ locale: localeProp, dict: dictProp, content, products
   const locale = i18n?.locale ?? localeProp;
   const dict = i18n?.dict ?? dictProp;
   const catalog = localizeHref("/products", locale);
-  const lookbook = takeCatalogProducts(featured, products, 8);
+  const lookbook = takeCatalogProducts(featured, products, content.catalogCount ?? 8);
   const featuredIds = new Set(lookbook.map((p) => p.id));
   const rest = products.filter((p) => !featuredIds.has(p.id)).slice(0, 8);
   const ticker = marqueeLines(content.marquee, locale);

@@ -18,9 +18,12 @@ import {
   AdminTableWrap,
 } from "@/components/admin/AdminButtons";
 import { AdminProductThumb } from "@/components/admin/AdminProductThumb";
+import { AdminProductsPagination } from "@/components/admin/AdminProductsPagination";
 import { AdminProductsToolbar } from "@/components/admin/AdminProductsToolbar";
 import { TableScroll } from "@/components/ui/ScrollArea";
 import { Trash2 } from "lucide-react";
+
+const PAGE_SIZE = 25;
 
 function matchesQuery(product: ProductRow, query: string) {
   const q = query.trim().toLowerCase();
@@ -53,7 +56,7 @@ export default async function AdminProductsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ saved?: string; q?: string; status?: string }>;
+  searchParams: Promise<{ saved?: string; q?: string; status?: string; page?: string }>;
 }) {
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
@@ -64,6 +67,7 @@ export default async function AdminProductsPage({
 
   const query = (sp.q ?? "").trim();
   const status = sp.status === "active" || sp.status === "draft" ? sp.status : "all";
+  const requestedPage = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
   let request = supabase.from("products").select("*").order("created_at", { ascending: false });
   if (status === "active") request = request.eq("active", true);
@@ -72,7 +76,16 @@ export default async function AdminProductsPage({
   const { data, error } = await request;
   if (error) console.error(error);
 
-  const products = ((data ?? []) as ProductRow[]).filter((product) => matchesQuery(product, query));
+  const filtered = ((data ?? []) as ProductRow[]).filter((product) => matchesQuery(product, query));
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+  const start = (page - 1) * PAGE_SIZE;
+  const products = filtered.slice(start, start + PAGE_SIZE);
+  const from = total === 0 ? 0 : start + 1;
+  const to = Math.min(start + PAGE_SIZE, total);
+  const actionPath = localizedPath("/admin/products", locale);
+
   const savedText =
     sp.saved === "draft"
       ? dict.admin.productDraftSaved
@@ -105,7 +118,7 @@ export default async function AdminProductsPage({
 
       <AdminProductsToolbar
         locale={locale}
-        actionPath={localizedPath("/admin/products", locale)}
+        actionPath={actionPath}
         initialQuery={query}
         initialStatus={status}
         labels={{
@@ -121,7 +134,12 @@ export default async function AdminProductsPage({
       />
 
       <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--page-text-muted, #666)" }}>
-        {dict.admin.productsCount.replace("{count}", String(products.length))}
+        {total === 0
+          ? dict.admin.productsCount.replace("{count}", "0")
+          : dict.admin.productsShowing
+              .replace("{from}", String(from))
+              .replace("{to}", String(to))
+              .replace("{count}", String(total))}
       </p>
 
       <AdminTableWrap>
@@ -222,6 +240,19 @@ export default async function AdminProductsPage({
           </AdminTable>
         </TableScroll>
       </AdminTableWrap>
+
+      <AdminProductsPagination
+        actionPath={actionPath}
+        query={query}
+        status={status}
+        page={page}
+        totalPages={totalPages}
+        labels={{
+          prev: dict.admin.productsPagePrev,
+          next: dict.admin.productsPageNext,
+          pageOf: dict.admin.productsPageOf,
+        }}
+      />
     </div>
   );
 }

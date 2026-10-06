@@ -1014,6 +1014,28 @@ export function SiteContentForm({
             value={page.texts.catalog}
             onChange={(value) => setTexts("catalog", value)}
           />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 14 }}>
+            <span style={{ fontSize: "0.78rem" }}>{dict.admin.homeCatalogCount}</span>
+            {([4, 8, 12, 16, 20, 24] as const).map((count) => (
+              <button
+                key={count}
+                type="button"
+                aria-pressed={(page.catalogCount ?? 8) === count}
+                onClick={() => setPage((prev) => ({ ...prev, catalogCount: count }))}
+                style={{
+                  minWidth: 42,
+                  border: "1px solid var(--page-text, #111)",
+                  background: (page.catalogCount ?? 8) === count ? "var(--page-text, #111)" : "transparent",
+                  color: (page.catalogCount ?? 8) === count ? "var(--page-bg, #fff)" : "inherit",
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                }}
+              >
+                {count}
+              </button>
+            ))}
+          </div>
+          <p style={{ margin: "10px 0 0", color: "var(--page-text-muted)" }}>{dict.admin.homeCatalogCountHint}</p>
         </section>
 
         <section id="content-section-best" style={{ scrollMarginTop: 120 }}>
