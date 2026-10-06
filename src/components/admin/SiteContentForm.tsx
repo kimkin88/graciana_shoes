@@ -307,13 +307,19 @@ function TileLibrary({
     if (!list?.length) return;
     const next = [...media];
     let selectedMediaId = tile.selectedMediaId ?? "";
+    let rejectedVideo = false;
     for (const file of Array.from(list)) {
-      const tooLarge = kind === "image" ? isImageTooLarge(file.size) : isVideoTooLarge(file.size);
-      if (tooLarge) continue;
+      if (kind === "image" ? isImageTooLarge(file.size) : isVideoTooLarge(file.size)) {
+        if (kind === "video") rejectedVideo = true;
+        continue;
+      }
       const id = crypto.randomUUID();
       registerSitePendingFile(siteAssetPendingKey(tile.id, id), file, kind);
       next.push({ id, kind, src: URL.createObjectURL(file) });
       if (!selectedMediaId) selectedMediaId = id;
+    }
+    if (rejectedVideo) {
+      window.alert(dict.admin.videoTooLarge);
     }
     commit(next, selectedMediaId);
   }
@@ -411,6 +417,7 @@ function TileLibrary({
         </label>
         <label style={{ display: "grid", gap: 4, fontSize: "0.78rem" }}>
           {dict.admin.homeHeroAddVideos}
+          <span style={{ color: "var(--page-text-muted)", fontSize: "0.72rem" }}>{dict.admin.videoSizeLimit}</span>
           <input
             type="file"
             accept="video/mp4,video/webm,video/quicktime"
@@ -588,13 +595,21 @@ function TileEditor({
                 placeholder={(tile.video ?? "").startsWith("blob:") ? dict.admin.homeMediaPendingUpload : undefined}
                 onChange={(e) => onChange({ ...tile, video: e.target.value })}
               />
+              <p style={{ margin: "6px 0 0", fontSize: "0.78rem", color: "var(--page-text-muted)" }}>
+                {dict.admin.videoSizeLimit}
+              </p>
               <Input
                 type="file"
                 accept="video/mp4,video/webm,video/quicktime"
                 style={{ marginTop: 8 }}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (!file || isVideoTooLarge(file.size)) return;
+                  if (!file) return;
+                  if (isVideoTooLarge(file.size)) {
+                    window.alert(dict.admin.videoTooLarge);
+                    e.target.value = "";
+                    return;
+                  }
                   registerSitePendingFile(siteTileVideoPendingKey(tile.id), file, "video");
                   onChange({ ...tile, video: URL.createObjectURL(file) });
                   e.target.value = "";

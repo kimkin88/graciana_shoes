@@ -18,7 +18,7 @@ import { useToast } from "@/context/toast-context";
 import { productFormErrorMessage } from "@/lib/admin/product-errors";
 import { productCardImage, productOriginalImage } from "@/lib/products/media";
 import { uploadProductMedia } from "@/lib/storage/client-product-media";
-import { isImageTooLarge, isVideoTooLarge } from "@/lib/storage/media-limits";
+import { isImageTooLarge, isVideoTooLarge, MAX_VIDEO_MB } from "@/lib/storage/media-limits";
 import { STORE_CATEGORIES } from "@/lib/catalog/categories";
 import { ADMIN_CURRENCIES } from "@/lib/money/fx";
 import { centsFromMajor, majorFromCents, parseGallery } from "@/lib/products/commerce";
@@ -343,7 +343,7 @@ export function ProductForm({
   function rejectOversized(file: File, kind: "image" | "video") {
     const tooLarge = kind === "image" ? isImageTooLarge(file.size) : isVideoTooLarge(file.size);
     if (!tooLarge) return false;
-    const message = dict.admin.mediaTooLarge;
+    const message = kind === "video" ? dict.admin.videoTooLarge : dict.admin.mediaTooLarge;
     setFormError(message);
     setMediaHint(message);
     toast({ variant: "error", title: message });
@@ -1055,6 +1055,7 @@ export function ProductForm({
           <Field>
             <Label htmlFor="gallery_videos">{dict.admin.galleryVideos}</Label>
             <Hint>{dict.admin.galleryVideosHint}</Hint>
+            <Hint style={{ marginTop: 0 }}>{dict.admin.videoSizeLimit}</Hint>
             <Input
               ref={galleryVideosRef}
               id="gallery_videos"
@@ -1119,6 +1120,7 @@ export function ProductForm({
           </Field>
           <Field>
             <Label htmlFor="video_file">{dict.admin.videoFile}</Label>
+            <Hint>{dict.admin.videoSizeLimit}</Hint>
             <FileUploader
               handleChange={(value) => {
                 const file = Array.isArray(value) ? value[0] : value;
@@ -1126,11 +1128,20 @@ export function ProductForm({
               }}
               name="video_drop"
               types={["MP4", "MOV", "WEBM"]}
+              maxSize={MAX_VIDEO_MB}
+              onSizeError={() => {
+                setFormError(dict.admin.videoTooLarge);
+                setMediaHint(dict.admin.videoTooLarge);
+                toast({ variant: "error", title: dict.admin.videoTooLarge });
+              }}
             >
               <div style={{ border: "1px dashed #94a3b8", padding: 14 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <VideoIcon />
                   <span>{dict.admin.dropVideo}</span>
+                </div>
+                <div style={{ marginTop: 6, fontSize: "0.78rem", color: "#64748b" }}>
+                  {dict.admin.videoSizeLimit}
                 </div>
               </div>
             </FileUploader>

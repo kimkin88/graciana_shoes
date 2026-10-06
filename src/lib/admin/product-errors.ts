@@ -23,9 +23,10 @@ export function productFormErrorMessage(code: string | null | undefined, dict: M
     case "image_process":
       return dict.admin.mediaUploadError;
     case "image_too_large":
-    case "video_too_large":
     case "invalid_media":
       return dict.admin.mediaTooLarge;
+    case "video_too_large":
+      return dict.admin.videoTooLarge;
     default:
       return dict.admin.saveError;
   }
