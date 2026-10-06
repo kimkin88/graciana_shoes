@@ -1,8 +1,17 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { isImageTooLarge, isVideoTooLarge } from "@/lib/storage/media-limits";
 import { PRODUCT_IMAGES_BUCKET, publicStorageUrl } from "@/lib/storage/urls";
 import type { GalleryItem } from "@/types";
+
+function assertImageSize(file: File | Blob) {
+  if (isImageTooLarge(file.size)) throw new Error("image_too_large");
+}
+
+function assertVideoSize(file: File | Blob) {
+  if (isVideoTooLarge(file.size)) throw new Error("video_too_large");
+}
 
 type UploadKind = "image-original" | "image-optimized" | "video" | "gallery-image" | "gallery-video";
 
@@ -30,6 +39,21 @@ async function optimizedJpeg(file: File) {
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.78));
   if (!blob) throw new Error("image_process");
   return blob;
+}
+
+/** Storefront copy: shrink when possible; keep the original file if the browser cannot decode it. */
+async function storefrontImage(file: File): Promise<{ blob: Blob; contentType: string; name: string }> {
+  try {
+    const blob = await optimizedJpeg(file);
+    return { blob, contentType: "image/jpeg", name: "optimized.jpg" };
+  } catch (error) {
+    console.warn("[product-media:optimize]", error);
+    return {
+      blob: file,
+      contentType: file.type || "application/octet-stream",
+      name: file.name || "original",
+    };
+  }
 }
 
 async function sign(productId: string, uploads: PendingUpload[]) {
@@ -70,7 +94,8 @@ export async function uploadProductMedia(input: {
   const pending: PendingUpload[] = [];
 
   if (input.image) {
-    const optimized = await optimizedJpeg(input.image);
+    assertImageSize(input.image);
+    const optimized = await storefrontImage(input.image);
     pending.push({
       key: "primary-original",
       kind: "image-original",
@@ -81,12 +106,13 @@ export async function uploadProductMedia(input: {
     pending.push({
       key: "primary-optimized",
       kind: "image-optimized",
-      file: optimized,
-      name: "optimized.jpg",
-      contentType: "image/jpeg",
+      file: optimized.blob,
+      name: optimized.name,
+      contentType: optimized.contentType,
     });
   }
   if (input.video) {
+    assertVideoSize(input.video);
     pending.push({
       key: "primary-video",
       kind: "video",
@@ -97,19 +123,23 @@ export async function uploadProductMedia(input: {
   }
 
   let imageIndex = input.keptGallery.filter((item) => (item.kind ?? "image") !== "video").length;
-  input.galleryImages.slice(0, 16).forEach((file, offset) => {
+  const galleryImageFiles = input.galleryImages.slice(0, 16);
+  for (const [offset, file] of galleryImageFiles.entries()) {
+    assertImageSize(file);
+    const optimized = await storefrontImage(file);
     pending.push({
       key: `gallery-image-${offset}`,
       kind: "gallery-image",
-      file,
-      name: file.name,
+      file: optimized.blob,
+      name: optimized.name,
       index: imageIndex + offset,
-      contentType: "image/jpeg",
+      contentType: optimized.contentType,
     });
-  });
+  }
 
   let videoIndex = input.keptGallery.filter((item) => item.kind === "video").length;
   input.galleryVideos.slice(0, 8).forEach((file, offset) => {
+    assertVideoSize(file);
     pending.push({
       key: `gallery-video-${offset}`,
       kind: "gallery-video",
@@ -121,14 +151,6 @@ export async function uploadProductMedia(input: {
   });
 
   if (!pending.length) return { gallery: input.keptGallery };
-
-  // Gallery images are compressed before upload, just as the former server upload did.
-  await Promise.all(
-    pending.map(async (item) => {
-      if (item.kind !== "gallery-image") return;
-      item.file = await optimizedJpeg(item.file as File);
-    }),
-  );
 
   const signed = await sign(input.productId, pending);
   const signedByKey = new Map(signed.map((item) => [item.key, item]));

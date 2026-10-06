@@ -1,13 +1,12 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isImageTooLarge, MAX_VIDEO_BYTES } from "@/lib/storage/media-limits";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/storage/urls";
 
 export { PRODUCT_IMAGES_BUCKET, publicStorageUrl } from "@/lib/storage/urls";
 
 const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
 const VIDEO_EXTS = new Set(["mp4", "mov", "webm", "m4v"]);
-const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 28 * 1024 * 1024;
 const OPTIMIZED_MAX_WIDTH = 1400;
 const OPTIMIZED_MAX_HEIGHT = 1750;
 
@@ -82,7 +81,7 @@ export async function uploadProductImage(
   productId: string,
   file: File,
 ): Promise<UploadedImageAssets> {
-  if (file.size > MAX_IMAGE_BYTES) {
+  if (isImageTooLarge(file.size)) {
     throw new Error("image_too_large");
   }
   const ext = normalizeExt(file.name, "jpg");
@@ -175,7 +174,7 @@ export async function uploadGalleryImage(
   file: File,
   index: number,
 ): Promise<UploadedImageAssets> {
-  if (file.size > MAX_IMAGE_BYTES) {
+  if (isImageTooLarge(file.size)) {
     throw new Error("image_too_large");
   }
   const originalBytes = Buffer.from(await file.arrayBuffer());

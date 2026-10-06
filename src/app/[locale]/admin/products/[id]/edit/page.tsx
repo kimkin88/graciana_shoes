@@ -3,6 +3,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { createClient } from "@/lib/supabase/server";
 import { loadTaxonomyHints } from "@/lib/products/taxonomy";
+import { productFormErrorMessage } from "@/lib/admin/product-errors";
 import { ProductForm } from "@/components/admin/ProductForm";
 import type { ProductRow } from "@/types";
 
@@ -28,26 +29,13 @@ export default async function AdminEditProductPage({
 
   if (error || !data) notFound();
   const product = data as ProductRow;
-
-  const errorText =
-    sp.error === "media" || sp.error === "image_upload" || sp.error === "video_upload"
-      ? dict.admin.mediaUploadError
-      : sp.error === "image_too_large" || sp.error === "video_too_large"
-        ? dict.admin.mediaTooLarge
-        : sp.error === "fields" || sp.error === "slug"
-          ? dict.admin.fieldsError
-          : sp.error
-            ? dict.admin.saveError
-            : null;
+  const errorText = productFormErrorMessage(sp.error, dict);
 
   return (
     <div>
       <h2 style={{ marginTop: 0 }}>
         {dict.admin.edit}: {product.name_ru}
       </h2>
-      {errorText ? (
-        <p style={{ color: "var(--page-danger, #b42318)", marginTop: 0 }}>{errorText}</p>
-      ) : null}
       <ProductForm
         mode="edit"
         locale={locale}
@@ -55,6 +43,7 @@ export default async function AdminEditProductPage({
         product={product}
         knownTags={taxonomy.knownTags}
         knownGroups={taxonomy.knownGroups}
+        initialError={errorText}
       />
     </div>
   );

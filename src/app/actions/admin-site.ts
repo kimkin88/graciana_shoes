@@ -1,7 +1,5 @@
 "use server";
 
-import { readFile } from "fs/promises";
-import path from "path";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -15,7 +13,6 @@ import {
   type HomeMediaTile,
   type HomePageContent,
 } from "@/lib/home/content";
-import { PRODUCT_IMAGES_BUCKET, uploadHomeImage, uploadHomeVideo } from "@/lib/storage/media";
 
 function readLocale(formData: FormData): Locale {
   const raw = String(formData.get("locale") ?? "ru");
@@ -26,138 +23,24 @@ function fail(locale: Locale, code: string): never {
   redirect(`${localizedPath("/admin/content", locale)}?error=${code}`);
 }
 
-function isBucketUrl(url: string) {
-  return new RegExp(`/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/`, "i").test(url);
+function isTransientMediaUrl(src: string) {
+  return src.startsWith("blob:") || src.startsWith("data:");
 }
 
-function mimeFromName(name: string, fallback: string) {
-  const ext = name.split(".").pop()?.toLowerCase();
-  if (ext === "png") return "image/png";
-  if (ext === "webp") return "image/webp";
-  if (ext === "gif") return "image/gif";
-  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
-  if (ext === "mp4") return "video/mp4";
-  if (ext === "webm") return "video/webm";
-  if (ext === "mov") return "video/quicktime";
-  return fallback;
-}
-
-async function fileFromExistingSrc(src: string, kind: "image" | "video"): Promise<File | null> {
-  const trimmed = src.trim();
-  if (!trimmed || trimmed.startsWith("blob:") || trimmed.startsWith("data:") || isBucketUrl(trimmed)) {
-    return null;
-  }
-
-  try {
-    if (trimmed.startsWith("/")) {
-      const relative = trimmed.replace(/^\/+/, "");
-      const filePath = path.join(process.cwd(), "public", relative);
-      const bytes = await readFile(filePath);
-      const name = path.basename(filePath) || (kind === "image" ? "image.jpg" : "video.mp4");
-      return new File([new Uint8Array(bytes)], name, {
-        type: mimeFromName(name, kind === "image" ? "image/jpeg" : "video/mp4"),
-      });
-    }
-
-    if (/^https?:\/\//i.test(trimmed)) {
-      const res = await fetch(trimmed);
-      if (!res.ok) return null;
-      const bytes = Buffer.from(await res.arrayBuffer());
-      const name =
-        trimmed.split("/").pop()?.split("?")[0] || (kind === "image" ? "image.jpg" : "video.mp4");
-      return new File([new Uint8Array(bytes)], name, {
-        type: res.headers.get("content-type") || mimeFromName(name, kind === "image" ? "image/jpeg" : "video/mp4"),
-      });
-    }
-  } catch (err) {
-    console.error("[fileFromExistingSrc]", trimmed, err);
-  }
-  return null;
-}
-
-async function uploadAssetFile(
-  service: ReturnType<typeof createServiceClient>,
-  tile: HomeMediaTile,
-  assetId: string,
-  kind: "image" | "video",
-  file: File,
-) {
-  const folder = `${tile.id}/${assetId}`;
-  if (kind === "image") {
-    const uploaded = await uploadHomeImage(service, folder, file);
-    return uploaded.optimizedUrl;
-  }
-  const uploaded = await uploadHomeVideo(service, folder, file);
-  return uploaded.url;
-}
-
-async function applyLibraryUploads(
-  service: ReturnType<typeof createServiceClient>,
-  formData: FormData,
-  tile: HomeMediaTile,
-) {
-  const media = [...(tile.media ?? [])];
-  for (const asset of media) {
-    const file = formData.get(`asset_${tile.id}_${asset.id}`);
-    if (file instanceof File && file.size > 0) {
-      asset.src = await uploadAssetFile(service, tile, asset.id, asset.kind, file);
-      continue;
-    }
-    if (asset.src.startsWith("blob:") || asset.src.startsWith("data:")) {
-      asset.src = "";
-      continue;
-    }
-    const fromSrc = await fileFromExistingSrc(asset.src, asset.kind);
-    if (fromSrc) {
-      asset.src = await uploadAssetFile(service, tile, asset.id, asset.kind, fromSrc);
-    }
-  }
-  tile.media = media.filter((asset) => asset.src);
-  if (!tile.media.some((asset) => asset.id === tile.selectedMediaId)) {
-    tile.selectedMediaId = tile.media[0]?.id ?? "";
-  }
-  const selected = applyTileSelection(tile);
-  tile.src = selected.src;
-  tile.video = selected.video;
-}
-
-async function applyTileUploads(formData: FormData, tiles: HomeMediaTile[]) {
-  const service = createServiceClient();
+/** Client uploads media first; Server Action only persists final URLs in JSON. */
+function finalizeTiles(tiles: HomeMediaTile[]) {
   for (const tile of tiles) {
     if (tile.media?.length) {
-      await applyLibraryUploads(service, formData, tile);
-      if (tile.category) {
-        tile.href = `/products?category=${encodeURIComponent(tile.category)}`;
+      tile.media = tile.media.filter((asset) => asset.src && !isTransientMediaUrl(asset.src));
+      if (!tile.media.some((asset) => asset.id === tile.selectedMediaId)) {
+        tile.selectedMediaId = tile.media[0]?.id ?? "";
       }
-      continue;
-    }
-    const image = formData.get(`image_${tile.id}`);
-    const video = formData.get(`video_${tile.id}`);
-
-    if (image instanceof File && image.size > 0) {
-      const uploaded = await uploadHomeImage(service, tile.id, image);
-      tile.src = uploaded.optimizedUrl;
-    } else if (tile.src.startsWith("blob:") || tile.src.startsWith("data:")) {
-      tile.src = "";
+      const selected = applyTileSelection(tile);
+      tile.src = selected.src;
+      tile.video = selected.video;
     } else {
-      const fromSrc = await fileFromExistingSrc(tile.src, "image");
-      if (fromSrc) {
-        const uploaded = await uploadHomeImage(service, tile.id, fromSrc);
-        tile.src = uploaded.optimizedUrl;
-      }
-    }
-
-    if (video instanceof File && video.size > 0) {
-      const uploaded = await uploadHomeVideo(service, tile.id, video);
-      tile.video = uploaded.url;
-    } else if (tile.video?.startsWith("blob:") || tile.video?.startsWith("data:")) {
-      tile.video = "";
-    } else if (tile.video) {
-      const fromSrc = await fileFromExistingSrc(tile.video, "video");
-      if (fromSrc) {
-        const uploaded = await uploadHomeVideo(service, tile.id, fromSrc);
-        tile.video = uploaded.url;
-      }
+      if (isTransientMediaUrl(tile.src)) tile.src = "";
+      if (tile.video && isTransientMediaUrl(tile.video)) tile.video = "";
     }
 
     if (tile.category) {
@@ -193,7 +76,7 @@ export async function updateSiteContent(formData: FormData) {
   }
 
   try {
-    await applyTileUploads(formData, [...parsed.hero, ...parsed.categories, ...parsed.looks]);
+    finalizeTiles([...parsed.hero, ...parsed.categories, ...parsed.looks]);
     await saveHomePageRow(parsed);
   } catch (err) {
     console.error("[updateSiteContent]", err);

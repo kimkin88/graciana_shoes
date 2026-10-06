@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import styled from "styled-components";
 import { useFormStatus } from "react-dom";
 import type { Locale } from "@/i18n/config";
@@ -26,6 +26,16 @@ import {
   type HomePageContent,
   type HomePageTexts,
 } from "@/lib/home/content";
+import {
+  registerSitePendingFile,
+  resolveHomePageMedia,
+  siteAssetPendingKey,
+  siteTileImagePendingKey,
+  siteTileVideoPendingKey,
+  unregisterSitePendingFile,
+} from "@/lib/storage/client-site-media";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { isImageTooLarge, isVideoTooLarge } from "@/lib/storage/media-limits";
 
 type Props = {
   locale: Locale;
@@ -182,22 +192,6 @@ function MediaPreview({
   return <img src={src} alt="" style={box} />;
 }
 
-function KeptFileInput({ name, file }: { name: string; file?: File }) {
-  return (
-    <input
-      type="file"
-      name={name}
-      hidden
-      ref={(node) => {
-        if (!node || !file || node.files?.[0] === file) return;
-        const transfer = new DataTransfer();
-        transfer.items.add(file);
-        node.files = transfer.files;
-      }}
-    />
-  );
-}
-
 const thumbBox: CSSProperties = {
   width: 104,
   height: 138,
@@ -300,7 +294,6 @@ function TileLibrary({
   dict: Messages;
   onChange: (next: HomeMediaTile) => void;
 }) {
-  const files = useRef(new Map<string, File>());
   const [link, setLink] = useState("");
   const [linkKind, setLinkKind] = useState<"image" | "video">("image");
   const media = tile.media ?? [];
@@ -315,8 +308,10 @@ function TileLibrary({
     const next = [...media];
     let selectedMediaId = tile.selectedMediaId ?? "";
     for (const file of Array.from(list)) {
+      const tooLarge = kind === "image" ? isImageTooLarge(file.size) : isVideoTooLarge(file.size);
+      if (tooLarge) continue;
       const id = crypto.randomUUID();
-      files.current.set(id, file);
+      registerSitePendingFile(siteAssetPendingKey(tile.id, id), file, kind);
       next.push({ id, kind, src: URL.createObjectURL(file) });
       if (!selectedMediaId) selectedMediaId = id;
     }
@@ -333,7 +328,7 @@ function TileLibrary({
   }
 
   function removeAsset(id: string) {
-    files.current.delete(id);
+    unregisterSitePendingFile(siteAssetPendingKey(tile.id, id));
     const next = media.filter((asset) => asset.id !== id);
     const selectedMediaId = tile.selectedMediaId === id ? (next[0]?.id ?? "") : (tile.selectedMediaId ?? "");
     commit(next, selectedMediaId);
@@ -395,9 +390,6 @@ function TileLibrary({
                 >
                   {dict.admin.homeRemoveTile}
                 </button>
-                {asset.src.startsWith("blob:") ? (
-                  <KeptFileInput name={`asset_${tile.id}_${asset.id}`} file={files.current.get(asset.id)} />
-                ) : null}
               </div>
             );
           })}
@@ -569,13 +561,15 @@ function TileEditor({
                 onChange={(e) => onChange({ ...tile, src: e.target.value })}
               />
               <Input
-                name={`image_${tile.id}`}
                 type="file"
                 accept="image/*"
                 style={{ marginTop: 8 }}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) onChange({ ...tile, src: URL.createObjectURL(file) });
+                  if (!file || isImageTooLarge(file.size)) return;
+                  registerSitePendingFile(siteTileImagePendingKey(tile.id), file, "image");
+                  onChange({ ...tile, src: URL.createObjectURL(file) });
+                  e.target.value = "";
                 }}
               />
               <p style={{ margin: "6px 0 0", fontSize: "0.78rem", color: "var(--page-text-muted)" }}>
@@ -595,13 +589,15 @@ function TileEditor({
                 onChange={(e) => onChange({ ...tile, video: e.target.value })}
               />
               <Input
-                name={`video_${tile.id}`}
                 type="file"
                 accept="video/mp4,video/webm,video/quicktime"
                 style={{ marginTop: 8 }}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) onChange({ ...tile, video: URL.createObjectURL(file) });
+                  if (!file || isVideoTooLarge(file.size)) return;
+                  registerSitePendingFile(siteTileVideoPendingKey(tile.id), file, "video");
+                  onChange({ ...tile, video: URL.createObjectURL(file) });
+                  e.target.value = "";
                 }}
               />
             </Field>
@@ -630,7 +626,31 @@ export function SiteContentForm({
   }));
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  const [payloadError, setPayloadError] = useState("");
+  const [saving, setSaving] = useState(false);
   const payload = useMemo(() => JSON.stringify(page), [page]);
+
+  async function submitContent(formData: FormData) {
+    setPayloadError("");
+    setSaving(true);
+    try {
+      const resolved = await resolveHomePageMedia(page);
+      setPage(resolved);
+      formData.set("home_page", JSON.stringify(resolved));
+      const fileKeys = new Set<string>();
+      for (const [key, value] of formData.entries()) {
+        if (value instanceof File) fileKeys.add(key);
+      }
+      for (const key of fileKeys) formData.delete(key);
+      await action(formData);
+    } catch (error) {
+      if (isRedirectError(error)) throw error;
+      console.error("[SiteContentForm:submit]", error);
+      setPayloadError(dict.admin.mediaUploadError);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function shownName(text: BiText, fallback: string) {
     const value = (locale === "en" ? text.en : text.ru).trim();
@@ -663,9 +683,28 @@ export function SiteContentForm({
 
   return (
     <>
-      <form action={action} style={{ display: "grid", gap: 28, width: "100%" }}>
+      <form action={submitContent} style={{ display: "grid", gap: 28, width: "100%" }} aria-busy={saving}>
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="home_page" value={payload} />
+        {payloadError ? (
+          <p
+            role="alert"
+            style={{
+              margin: 0,
+              padding: "12px 14px",
+              border: "1px solid #fecaca",
+              background: "#fef2f2",
+              color: "#b42318",
+            }}
+          >
+            {payloadError}
+          </p>
+        ) : null}
+        {saving ? (
+          <p role="status" style={{ margin: 0, color: "var(--page-text-muted)" }}>
+            {dict.admin.formUploading}
+          </p>
+        ) : null}
         <datalist id="home-product-categories">
           {STORE_CATEGORIES.map((item) => (
             <option key={item.key} value={item.key}>

@@ -7,13 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isAdmin } from "@/lib/auth/roles";
 import { isLocale, type Locale } from "@/i18n/config";
 import { localizedPath } from "@/i18n/routing";
-import {
-  deleteProductFolder,
-  uploadGalleryImage,
-  uploadGalleryVideo,
-  uploadProductImage,
-  uploadProductVideo,
-} from "@/lib/storage/media";
+import { deleteProductFolder } from "@/lib/storage/media";
 import { centsFromMajor, parseGallery, textToSpecs } from "@/lib/products/commerce";
 import { isNumericSlug, isUuid } from "@/lib/products/slugify";
 import type { GalleryItem } from "@/types";
@@ -224,37 +218,10 @@ async function upsertTaxonomy(
   }
 }
 
-async function applyGalleryUploads(
-  service: ReturnType<typeof createServiceClient>,
-  productId: string,
-  formData: FormData,
-  existing: GalleryItem[],
-): Promise<GalleryItem[]> {
-  const kept = existing.filter(
+function keptGallery(existing: GalleryItem[]): GalleryItem[] {
+  return existing.filter(
     (item) => item.url && !item.url.startsWith("blob:") && !item.url.startsWith("data:"),
   );
-  const imageFiles = formData
-    .getAll("gallery_files")
-    .filter((f): f is File => f instanceof File && f.size > 0);
-  const videoFiles = formData
-    .getAll("gallery_videos")
-    .filter((f): f is File => f instanceof File && f.size > 0);
-
-  const uploaded: GalleryItem[] = [...kept];
-  let imageIndex = kept.filter((item) => (item.kind ?? "image") !== "video").length;
-  let videoIndex = kept.filter((item) => item.kind === "video").length;
-
-  for (const file of imageFiles.slice(0, 16)) {
-    const image = await uploadGalleryImage(service, productId, file, imageIndex);
-    uploaded.push({ url: image.optimizedUrl, path: image.optimizedPath, kind: "image" });
-    imageIndex += 1;
-  }
-  for (const file of videoFiles.slice(0, 8)) {
-    const video = await uploadGalleryVideo(service, productId, file, videoIndex);
-    uploaded.push({ url: video.url, path: video.path, kind: "video" });
-    videoIndex += 1;
-  }
-  return uploaded;
 }
 
 function syncPrimaryVideo(gallery: GalleryItem[], fields: { video_url: string | null }) {
@@ -309,12 +276,12 @@ export async function createProduct(formData: FormData) {
       .single();
     if (retry.error || !retry.data?.id) {
       console.error(retry.error);
-      fail(locale, "/admin/products/new", "db");
+      fail(locale, "/admin/products/new", retry.error?.code === "23505" ? "duplicate" : "db");
     }
     productId = retry.data.id;
   } else if (first.error || !first.data?.id) {
     console.error(first.error);
-    fail(locale, "/admin/products/new", "db");
+    fail(locale, "/admin/products/new", first.error?.code === "23505" ? "duplicate" : "db");
   } else {
     productId = first.data.id;
   }
@@ -325,43 +292,31 @@ export async function createProduct(formData: FormData) {
     if (slugErr) console.error("[createProduct:slug]", slugErr);
   }
 
-  const imageFile = formData.get("image_file");
-  const videoFile = formData.get("video_file");
   const mediaPatch: Record<string, unknown> = {};
+  const gallery = keptGallery(fields.gallery);
 
-  try {
-    if (directMedia.image_original_path && directMedia.image_optimized_path) {
-      mediaPatch.image_original_path = directMedia.image_original_path;
-      mediaPatch.image_optimized_path = directMedia.image_optimized_path;
-      mediaPatch.image_url = fields.image_url;
-    }
-    if (directMedia.video_path) {
-      mediaPatch.video_path = directMedia.video_path;
-      mediaPatch.video_url = fields.video_url;
-    }
-    if (imageFile instanceof File && imageFile.size > 0) {
-      const image = await uploadProductImage(service, productId, imageFile);
-      mediaPatch.image_original_path = image.originalPath;
-      mediaPatch.image_optimized_path = image.optimizedPath;
-      mediaPatch.image_url = image.optimizedUrl;
-    } else if (fields.image_url?.startsWith("blob:") || fields.image_url?.startsWith("data:")) {
-      mediaPatch.image_url = null;
-    }
-    if (videoFile instanceof File && videoFile.size > 0) {
-      const video = await uploadProductVideo(service, productId, videoFile);
-      mediaPatch.video_path = video.path;
-      mediaPatch.video_url = video.url;
-    }
-    const gallery = await applyGalleryUploads(service, productId, formData, fields.gallery);
-    mediaPatch.gallery = gallery;
-    if (!(videoFile instanceof File && videoFile.size > 0) && !directMedia.video_path) {
-      Object.assign(mediaPatch, syncPrimaryVideo(gallery, fields));
-    }
-  } catch (err) {
-    console.error("[createProduct:media]", err);
-    await service.from("products").delete().eq("id", productId);
-    await deleteProductFolder(service, productId);
-    fail(locale, "/admin/products/new", err instanceof Error ? err.message : "media");
+  if (directMedia.image_original_path && directMedia.image_optimized_path) {
+    mediaPatch.image_original_path = directMedia.image_original_path;
+    mediaPatch.image_optimized_path = directMedia.image_optimized_path;
+    mediaPatch.image_url =
+      fields.image_url && !fields.image_url.startsWith("blob:") && !fields.image_url.startsWith("data:")
+        ? fields.image_url
+        : null;
+  } else if (fields.image_url?.startsWith("blob:") || fields.image_url?.startsWith("data:")) {
+    mediaPatch.image_url = null;
+  }
+
+  if (directMedia.video_path) {
+    mediaPatch.video_path = directMedia.video_path;
+    mediaPatch.video_url =
+      fields.video_url && !fields.video_url.startsWith("blob:") && !fields.video_url.startsWith("data:")
+        ? fields.video_url
+        : null;
+  }
+
+  mediaPatch.gallery = gallery;
+  if (!directMedia.video_path) {
+    Object.assign(mediaPatch, syncPrimaryVideo(gallery, fields));
   }
 
   if (Object.keys(mediaPatch).length) {
@@ -386,7 +341,7 @@ export async function createProduct(formData: FormData) {
   revalidatePath(`/${locale}`, "layout");
   revalidatePath(`/${locale}/products`, "page");
   revalidatePath(`/${locale}/admin/products`, "page");
-  redirect(localizedPath("/admin/products", locale));
+  redirect(`${localizedPath("/admin/products", locale)}?saved=${fields.active ? "1" : "draft"}`);
 }
 
 export async function updateProduct(formData: FormData) {
@@ -408,40 +363,30 @@ export async function updateProduct(formData: FormData) {
     isNumericSlug(fields.slug) || fields.slug === "product" || !fields.slug ? id : fields.slug;
   const patch: Record<string, unknown> = { ...fields, slug };
   const directMedia = uploadedMedia(formData, id);
-  const imageFile = formData.get("image_file");
-  const videoFile = formData.get("video_file");
+  const gallery = keptGallery(fields.gallery);
 
-  try {
-    if (directMedia.image_original_path && directMedia.image_optimized_path) {
-      patch.image_original_path = directMedia.image_original_path;
-      patch.image_optimized_path = directMedia.image_optimized_path;
-      patch.image_url = fields.image_url;
-    }
-    if (directMedia.video_path) {
-      patch.video_path = directMedia.video_path;
-      patch.video_url = fields.video_url;
-    }
-    if (imageFile instanceof File && imageFile.size > 0) {
-      const image = await uploadProductImage(service, id, imageFile);
-      patch.image_original_path = image.originalPath;
-      patch.image_optimized_path = image.optimizedPath;
-      patch.image_url = image.optimizedUrl;
-    } else if (typeof patch.image_url === "string" && (patch.image_url.startsWith("blob:") || patch.image_url.startsWith("data:"))) {
-      patch.image_url = null;
-    }
-    if (videoFile instanceof File && videoFile.size > 0) {
-      const video = await uploadProductVideo(service, id, videoFile);
-      patch.video_path = video.path;
-      patch.video_url = video.url;
-    }
-    const gallery = await applyGalleryUploads(service, id, formData, fields.gallery);
-    patch.gallery = gallery;
-    if (!(videoFile instanceof File && videoFile.size > 0) && !directMedia.video_path) {
-      Object.assign(patch, syncPrimaryVideo(gallery, fields));
-    }
-  } catch (err) {
-    console.error("[updateProduct:media]", err);
-    fail(locale, `/admin/products/${id}/edit`, err instanceof Error ? err.message : "media");
+  if (directMedia.image_original_path && directMedia.image_optimized_path) {
+    patch.image_original_path = directMedia.image_original_path;
+    patch.image_optimized_path = directMedia.image_optimized_path;
+    patch.image_url =
+      fields.image_url && !fields.image_url.startsWith("blob:") && !fields.image_url.startsWith("data:")
+        ? fields.image_url
+        : null;
+  } else if (typeof patch.image_url === "string" && (patch.image_url.startsWith("blob:") || patch.image_url.startsWith("data:"))) {
+    patch.image_url = null;
+  }
+
+  if (directMedia.video_path) {
+    patch.video_path = directMedia.video_path;
+    patch.video_url =
+      fields.video_url && !fields.video_url.startsWith("blob:") && !fields.video_url.startsWith("data:")
+        ? fields.video_url
+        : null;
+  }
+
+  patch.gallery = gallery;
+  if (!directMedia.video_path) {
+    Object.assign(patch, syncPrimaryVideo(gallery, fields));
   }
 
   const { error } = await service.from("products").update(patch).eq("id", id);
@@ -453,14 +398,14 @@ export async function updateProduct(formData: FormData) {
     }
   } else if (error) {
     console.error(error);
-    fail(locale, `/admin/products/${id}/edit`, "db");
+    fail(locale, `/admin/products/${id}/edit`, error.code === "23505" ? "duplicate" : "db");
   }
 
   await upsertTaxonomy(service, fields);
   revalidatePath(`/${locale}`, "layout");
   revalidatePath(`/${locale}/products`, "page");
   revalidatePath(`/${locale}/admin/products`, "page");
-  redirect(localizedPath("/admin/products", locale));
+  redirect(`${localizedPath("/admin/products", locale)}?saved=${fields.active ? "1" : "draft"}`);
 }
 
 export async function deleteProduct(formData: FormData) {

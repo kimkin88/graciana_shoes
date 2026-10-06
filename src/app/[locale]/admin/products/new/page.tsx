@@ -3,19 +3,24 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { createClient } from "@/lib/supabase/server";
 import { loadTaxonomyHints } from "@/lib/products/taxonomy";
+import { productFormErrorMessage } from "@/lib/admin/product-errors";
 import { ProductForm } from "@/components/admin/ProductForm";
 
 export default async function AdminNewProductPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale = raw as Locale;
+  const sp = await searchParams;
   const dict = await getDictionary(locale);
   const supabase = await createClient();
   const { knownTags, knownGroups } = await loadTaxonomyHints(supabase);
+  const errorText = productFormErrorMessage(sp.error, dict);
 
   return (
     <div>
@@ -26,6 +31,7 @@ export default async function AdminNewProductPage({
         dict={dict}
         knownTags={knownTags}
         knownGroups={knownGroups}
+        initialError={errorText}
       />
     </div>
   );

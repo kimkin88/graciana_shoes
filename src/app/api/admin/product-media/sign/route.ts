@@ -3,9 +3,17 @@ import { isAdmin } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PRODUCT_IMAGES_BUCKET } from "@/lib/storage/urls";
+import { isImageTooLarge, MAX_VIDEO_BYTES } from "@/lib/storage/media-limits";
 import { isUuid } from "@/lib/products/slugify";
 
-type UploadKind = "image-original" | "image-optimized" | "video" | "gallery-image" | "gallery-video";
+type UploadKind =
+  | "image-original"
+  | "image-optimized"
+  | "video"
+  | "gallery-image"
+  | "gallery-video"
+  | "site-image"
+  | "site-video";
 
 type UploadRequest = {
   key: string;
@@ -13,10 +21,10 @@ type UploadRequest = {
   name?: string;
   index?: number;
   size: number;
+  /** Required for site-* kinds. Example: site/home/{tileId}/{assetId} */
+  folder?: string;
 };
 
-const IMAGE_MAX = 20 * 1024 * 1024;
-const VIDEO_MAX = 28 * 1024 * 1024;
 const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
 const VIDEO_EXTS = new Set(["mp4", "mov", "webm", "m4v"]);
 
@@ -25,30 +33,53 @@ function extension(name: string | undefined, fallback: string) {
   return raw === "jpeg" ? "jpg" : raw;
 }
 
-function uploadPath(productId: string, item: UploadRequest) {
+function isSafeSiteFolder(folder: string) {
+  return /^site\/[a-zA-Z0-9][a-zA-Z0-9/_-]{0,180}$/.test(folder) && !folder.includes("..");
+}
+
+function productUploadPath(productId: string, item: UploadRequest) {
   if (!item.key || item.key.length > 100 || !Number.isFinite(item.size) || item.size <= 0) return null;
 
   if (item.kind === "image-optimized") {
-    if (item.size > IMAGE_MAX) return null;
+    if (isImageTooLarge(item.size)) return null;
     return `${productId}/optimized.jpg`;
   }
 
   if (item.kind === "gallery-image") {
-    if (item.size > IMAGE_MAX || !Number.isInteger(item.index) || item.index! < 0 || item.index! > 99) return null;
+    if (isImageTooLarge(item.size) || !Number.isInteger(item.index) || item.index! < 0 || item.index! > 99) {
+      return null;
+    }
     return `${productId}/g-${item.index}.jpg`;
   }
 
   if (item.kind === "image-original") {
     const ext = extension(item.name, "jpg");
-    if (item.size > IMAGE_MAX || !IMAGE_EXTS.has(ext)) return null;
+    if (isImageTooLarge(item.size) || !IMAGE_EXTS.has(ext)) return null;
     return `${productId}/original.${ext}`;
   }
 
   const ext = extension(item.name, "mp4");
-  if (item.size > VIDEO_MAX || !VIDEO_EXTS.has(ext)) return null;
+  if (item.size > MAX_VIDEO_BYTES || !VIDEO_EXTS.has(ext)) return null;
   if (item.kind === "video") return `${productId}/video.${ext}`;
   if (item.kind === "gallery-video" && Number.isInteger(item.index) && item.index! >= 0 && item.index! <= 99) {
     return `${productId}/gv-${item.index}.${ext}`;
+  }
+  return null;
+}
+
+function siteUploadPath(item: UploadRequest) {
+  const folder = item.folder?.trim() ?? "";
+  if (!item.key || item.key.length > 120 || !isSafeSiteFolder(folder)) return null;
+  if (!Number.isFinite(item.size) || item.size <= 0) return null;
+
+  if (item.kind === "site-image") {
+    if (isImageTooLarge(item.size)) return null;
+    return `${folder}/optimized.jpg`;
+  }
+  if (item.kind === "site-video") {
+    const ext = extension(item.name, "mp4");
+    if (item.size > MAX_VIDEO_BYTES || !VIDEO_EXTS.has(ext)) return null;
+    return `${folder}/video.${ext}`;
   }
   return null;
 }
@@ -62,16 +93,23 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as
     | { productId?: string; uploads?: UploadRequest[] }
     | null;
-  const productId = body?.productId ?? "";
   const uploads = body?.uploads ?? [];
-  if (!isUuid(productId) || !uploads.length || uploads.length > 26) {
+  if (!uploads.length || uploads.length > 40) {
+    return NextResponse.json({ error: "invalid" }, { status: 400 });
+  }
+
+  const siteOnly = uploads.every((item) => item.kind === "site-image" || item.kind === "site-video");
+  const productId = body?.productId ?? "";
+  if (!siteOnly && !isUuid(productId)) {
     return NextResponse.json({ error: "invalid" }, { status: 400 });
   }
 
   const service = createServiceClient();
   const signed = [];
   for (const item of uploads) {
-    const path = uploadPath(productId, item);
+    const path = siteOnly || item.kind.startsWith("site-")
+      ? siteUploadPath(item)
+      : productUploadPath(productId, item);
     if (!path) return NextResponse.json({ error: "invalid_media" }, { status: 400 });
     const result = await service.storage
       .from(PRODUCT_IMAGES_BUCKET)

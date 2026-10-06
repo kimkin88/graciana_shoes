@@ -5,7 +5,7 @@ export function publicStorageUrl(path: string | null | undefined, version?: stri
   if (/^https?:\/\//i.test(path) || path.startsWith("data:") || path.startsWith("blob:")) {
     return path;
   }
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   if (!base) return null;
   const url = `${base}/storage/v1/object/public/${PRODUCT_IMAGES_BUCKET}/${path.replace(/^\/+/, "")}`;
   if (!version) return url;

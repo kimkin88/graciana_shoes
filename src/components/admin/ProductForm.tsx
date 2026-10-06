@@ -2,6 +2,7 @@
 
 import { createProduct, updateProduct } from "@/app/actions/admin-products";
 import { DownloadIcon, FilePlusIcon, VideoIcon } from "@radix-ui/react-icons";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useMemo, useRef, useState } from "react";
 import { FileUploader } from "react-drag-drop-files";
 import ReactPlayer from "react-player";
@@ -12,16 +13,21 @@ import type { ProductRow } from "@/types";
 import { AdminButton } from "@/components/admin/AdminButtons";
 import { ProductPreview } from "@/components/admin/ProductPreview";
 import { Field, Input, Label, TextArea } from "@/components/ui/Input";
+import { useToast } from "@/context/toast-context";
+import { productFormErrorMessage } from "@/lib/admin/product-errors";
 import { productCardImage, productOriginalImage } from "@/lib/products/media";
 import { uploadProductMedia } from "@/lib/storage/client-product-media";
+import { isImageTooLarge, isVideoTooLarge } from "@/lib/storage/media-limits";
 import { STORE_CATEGORIES } from "@/lib/catalog/categories";
 import { ADMIN_CURRENCIES } from "@/lib/money/fx";
 import { centsFromMajor, majorFromCents, parseGallery } from "@/lib/products/commerce";
 import { buildProductPrefill } from "@/lib/products/prefill";
-import { slugify } from "@/lib/products/slugify";
+import { isNumericSlug, isUuid, slugify } from "@/lib/products/slugify";
 import { httpClient } from "@/lib/http/client";
 
 type Mode = "create" | "edit";
+type FormPhase = "idle" | "validating" | "uploading" | "saving";
+type FieldKey = "name_ru" | "name_en" | "slug" | "price_major" | "compare_at_major";
 
 type Props = {
   mode: Mode;
@@ -30,6 +36,7 @@ type Props = {
   product?: ProductRow;
   knownTags?: string[];
   knownGroups?: string[];
+  initialError?: string | null;
 };
 
 const Layout = styled.div`
@@ -39,6 +46,23 @@ const Layout = styled.div`
     grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
   }
+`;
+
+const FormColumn = styled.div`
+  min-width: 0;
+`;
+
+const FormBody = styled.fieldset`
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  width: 100%;
+`;
+
+const PreviewColumn = styled.div`
+  position: sticky;
+  top: calc(var(--header-h) + 16px);
 `;
 
 const Section = styled.section`
@@ -86,9 +110,49 @@ const Actions = styled.div`
   }
 `;
 
+const StatusBanner = styled.p<{ $tone: "info" | "error" }>`
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid
+    ${({ $tone }) => ($tone === "error" ? "#fecaca" : "color-mix(in srgb, currentColor 18%, transparent)")};
+  background: ${({ $tone, theme }) => ($tone === "error" ? "#fef2f2" : theme.colors.accent)};
+  color: ${({ $tone }) => ($tone === "error" ? "#b42318" : "inherit")};
+  font-size: 0.9rem;
+  line-height: 1.45;
+`;
+
+const FieldError = styled.span`
+  display: block;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #b42318;
+`;
+
+const InvalidInput = styled(Input)<{ $invalid?: boolean }>`
+  border-color: ${({ $invalid, theme }) => ($invalid ? "#b42318" : theme.colors.border)};
+`;
+
+const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function isValidSlug(value: string) {
+  const slug = value.trim().toLowerCase();
+  if (!slug) return false;
+  if (isUuid(slug) || isNumericSlug(slug)) return true;
+  return slugPattern.test(slug) && slug.length >= 2;
+}
+
 /** Shared bilingual admin form — posts to the matching server action. */
-export function ProductForm({ mode, locale, dict, product, knownTags = [], knownGroups = [] }: Props) {
+export function ProductForm({
+  mode,
+  locale,
+  dict,
+  product,
+  knownTags = [],
+  knownGroups = [],
+  initialError = null,
+}: Props) {
   const serverAction = mode === "create" ? createProduct : updateProduct;
+  const toast = useToast();
   const initialImage = product ? productCardImage(product) ?? "" : "";
   const originalImage = product ? productOriginalImage(product) ?? "" : "";
   const initialVideo = product?.video_url ?? "";
@@ -145,7 +209,10 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
   const [prefillNote, setPrefillNote] = useState("");
   const [mediaHint, setMediaHint] = useState("");
   const [notes, setNotes] = useState("");
-  const [pending, setPending] = useState(false);
+  const [phase, setPhase] = useState<FormPhase>("idle");
+  const [formError, setFormError] = useState<string | null>(initialError);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>({});
+  const [submitIntent, setSubmitIntent] = useState<"publish" | "draft" | null>(null);
 
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -154,6 +221,8 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
   const pendingGalleryImages = useRef<File[]>([]);
   const pendingGalleryVideos = useRef<File[]>([]);
   const uploadProductId = useRef(product?.id ?? "");
+  const formTopRef = useRef<HTMLDivElement | null>(null);
+  const pending = phase !== "idle";
 
   const galleryJson = useMemo(
     () =>
@@ -186,11 +255,31 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
     syncFileInput(input, [file]);
   }
 
+  /** Vercel rejects Server Action bodies ~4.5MB — never send File blobs to the action. */
+  function stripFilesFromFormData(formData: FormData) {
+    const fileKeys = new Set<string>();
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) fileKeys.add(key);
+    }
+    for (const key of fileKeys) formData.delete(key);
+  }
+
+  function rejectOversized(file: File, kind: "image" | "video") {
+    const tooLarge = kind === "image" ? isImageTooLarge(file.size) : isVideoTooLarge(file.size);
+    if (!tooLarge) return false;
+    const message = dict.admin.mediaTooLarge;
+    setFormError(message);
+    setMediaHint(message);
+    toast({ variant: "error", title: message });
+    return true;
+  }
+
   function onImageFileChange(file: File | null) {
     if (!file) {
       setImagePreview(initialImage);
       return;
     }
+    if (rejectOversized(file, "image")) return;
     setFileToInput(file, imageInputRef.current);
     setImagePreview(URL.createObjectURL(file));
   }
@@ -200,6 +289,7 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
       setVideoPreview(initialVideo);
       return;
     }
+    if (rejectOversized(file, "video")) return;
     setFileToInput(file, videoInputRef.current);
     setVideoPreview(URL.createObjectURL(file));
     setVideoUrl("");
@@ -209,6 +299,7 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
     if (!files) return;
     const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
     if (!list.length) return;
+    if (list.some((file) => rejectOversized(file, "image"))) return;
     pendingGalleryImages.current = [...pendingGalleryImages.current, ...list].slice(0, 16);
     syncFileInput(galleryInputRef.current, pendingGalleryImages.current);
     setGalleryPreviews((prev) => [
@@ -226,6 +317,7 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
     if (!files) return;
     const list = Array.from(files).filter((f) => f.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(f.name));
     if (!list.length) return;
+    if (list.some((file) => rejectOversized(file, "video"))) return;
     pendingGalleryVideos.current = [...pendingGalleryVideos.current, ...list].slice(0, 8);
     syncFileInput(galleryVideosRef.current, pendingGalleryVideos.current);
     setGalleryPreviews((prev) => [
@@ -269,14 +361,62 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
     setGalleryPreviews([]);
   }
 
+  function clearFieldError(key: FieldKey) {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function validateForm(): boolean {
+    const next: Partial<Record<FieldKey, string>> = {};
+    if (!nameRu.trim()) next.name_ru = dict.admin.requiredField;
+    if (!nameEn.trim()) next.name_en = dict.admin.requiredField;
+    if (!slug.trim()) next.slug = dict.admin.requiredField;
+    else if (!isValidSlug(slug)) next.slug = dict.admin.invalidSlug;
+
+    const price = centsFromMajor(priceMajor || "0");
+    if (!Number.isFinite(price) || price < 1) next.price_major = dict.admin.invalidPrice;
+
+    const compare = compareMajor.trim() ? centsFromMajor(compareMajor) : null;
+    if (compare != null && (!Number.isFinite(compare) || compare <= price)) {
+      next.compare_at_major = dict.admin.invalidComparePrice;
+    }
+
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  }
+
   async function submitProduct(formData: FormData) {
-    setPending(true);
+    const intent = String(formData.get("intent") ?? "publish") === "draft" ? "draft" : "publish";
+    setSubmitIntent(intent);
+    setFormError(null);
     setMediaHint("");
+    setPhase("validating");
+
+    if (!validateForm()) {
+      setPhase("idle");
+      setSubmitIntent(null);
+      setFormError(dict.admin.fixAndRetry);
+      toast({ variant: "error", title: dict.admin.fixAndRetry });
+      formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
     try {
       if (!uploadProductId.current) uploadProductId.current = crypto.randomUUID();
       const keptGallery = galleryPreviews
         .filter((item) => !item.url.startsWith("blob:") && !item.url.startsWith("data:"))
         .map((item) => ({ url: item.url, path: item.path, kind: item.kind }));
+      const hasMedia =
+        Boolean(imageInputRef.current?.files?.[0]) ||
+        Boolean(videoInputRef.current?.files?.[0]) ||
+        pendingGalleryImages.current.length > 0 ||
+        pendingGalleryVideos.current.length > 0;
+
+      if (hasMedia) setPhase("uploading");
       const media = await uploadProductMedia({
         productId: uploadProductId.current,
         image: imageInputRef.current?.files?.[0] ?? null,
@@ -287,12 +427,7 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
       });
 
       // Only small strings reach the Server Action; media bytes go straight to Storage.
-      formData.delete("image_file");
-      formData.delete("image_drop");
-      formData.delete("video_file");
-      formData.delete("video_drop");
-      formData.delete("gallery_files");
-      formData.delete("gallery_videos");
+      stripFilesFromFormData(formData);
       formData.set("product_id", uploadProductId.current);
       formData.set("gallery_json", JSON.stringify(media.gallery));
       if (media.image) {
@@ -305,13 +440,30 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
         formData.set("video_url", media.video.url);
       }
 
+      setPhase("saving");
       await serverAction(formData);
     } catch (error) {
+      if (isRedirectError(error)) throw error;
       console.error("[ProductForm:submit]", error);
-      setMediaHint(dict.admin.mediaUploadError);
-      setPending(false);
+      const code = error instanceof Error ? error.message : "media";
+      const message = productFormErrorMessage(code, dict) ?? dict.admin.saveError;
+      setFormError(message);
+      setMediaHint(message);
+      toast({ variant: "error", title: message });
+      setPhase("idle");
+      setSubmitIntent(null);
+      formTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
+
+  const phaseLabel =
+    phase === "validating"
+      ? dict.admin.formValidating
+      : phase === "uploading"
+        ? dict.admin.formUploading
+        : phase === "saving"
+          ? dict.admin.formSaving
+          : null;
 
   async function validateMediaUrl(url: string, label: string) {
     if (!url.trim()) return;
@@ -392,9 +544,28 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
 
   return (
     <Layout>
+      <FormColumn ref={formTopRef}>
+        {phaseLabel ? (
+          <StatusBanner $tone="info" role="status" aria-live="polite">
+            {phaseLabel}
+          </StatusBanner>
+        ) : null}
+        {formError && !phaseLabel ? (
+          <StatusBanner $tone="error" role="alert">
+            {formError}
+          </StatusBanner>
+        ) : null}
       <form
         action={submitProduct}
+        aria-busy={pending}
+        onSubmit={(event) => {
+          if (pending) {
+            event.preventDefault();
+            toast({ variant: "error", title: dict.admin.formBlocked });
+          }
+        }}
       >
+        <FormBody disabled={pending}>
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="gallery_json" value={galleryJson} />
         {mode === "edit" && product ? <input type="hidden" name="id" value={product.id} /> : null}
@@ -433,41 +604,62 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
               <Label htmlFor="name_ru">
                 {dict.admin.nameRu} <span>*</span>
               </Label>
-              <Input
+              <InvalidInput
                 id="name_ru"
                 name="name_ru"
                 required
+                $invalid={Boolean(fieldErrors.name_ru)}
+                aria-invalid={Boolean(fieldErrors.name_ru)}
                 value={nameRu}
                 onChange={(e) => {
                   setNameRu(e.target.value);
+                  clearFieldError("name_ru");
                   if (!slugTouched) {
                     setSlug(slugify(e.target.value, product?.id ?? "product"));
+                    clearFieldError("slug");
                   }
                 }}
               />
+              {fieldErrors.name_ru ? <FieldError>{fieldErrors.name_ru}</FieldError> : null}
             </Field>
             <Field>
               <Label htmlFor="name_en">
                 {dict.admin.nameEn} <span>*</span>
               </Label>
-              <Input id="name_en" name="name_en" required value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
+              <InvalidInput
+                id="name_en"
+                name="name_en"
+                required
+                $invalid={Boolean(fieldErrors.name_en)}
+                aria-invalid={Boolean(fieldErrors.name_en)}
+                value={nameEn}
+                onChange={(e) => {
+                  setNameEn(e.target.value);
+                  clearFieldError("name_en");
+                }}
+              />
+              {fieldErrors.name_en ? <FieldError>{fieldErrors.name_en}</FieldError> : null}
             </Field>
           </Row>
           <Field>
             <Label htmlFor="slug">
               {dict.admin.slug} <span>*</span>
             </Label>
-            <Input
+            <InvalidInput
               id="slug"
               name="slug"
               required
+              $invalid={Boolean(fieldErrors.slug)}
+              aria-invalid={Boolean(fieldErrors.slug)}
               value={slug}
               pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
               onChange={(e) => {
                 setSlugTouched(true);
                 setSlug(e.target.value);
+                clearFieldError("slug");
               }}
             />
+            {fieldErrors.slug ? <FieldError>{fieldErrors.slug}</FieldError> : null}
             <Hint style={{ marginTop: 6, marginBottom: 0 }}>{dict.admin.slugHint}</Hint>
           </Field>
           <Row>
@@ -592,25 +784,38 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
               <Label htmlFor="price_major">
                 {dict.admin.price} <span>*</span>
               </Label>
-              <Input
+              <InvalidInput
                 id="price_major"
                 name="price_major"
                 required
                 inputMode="decimal"
+                $invalid={Boolean(fieldErrors.price_major)}
+                aria-invalid={Boolean(fieldErrors.price_major)}
                 value={priceMajor}
-                onChange={(e) => setPriceMajor(e.target.value)}
+                onChange={(e) => {
+                  setPriceMajor(e.target.value);
+                  clearFieldError("price_major");
+                  clearFieldError("compare_at_major");
+                }}
               />
+              {fieldErrors.price_major ? <FieldError>{fieldErrors.price_major}</FieldError> : null}
               <Hint style={{ marginTop: 6, marginBottom: 0 }}>{dict.admin.priceMajorHint}</Hint>
             </Field>
             <Field>
               <Label htmlFor="compare_at_major">{dict.admin.compareAtPrice}</Label>
-              <Input
+              <InvalidInput
                 id="compare_at_major"
                 name="compare_at_major"
                 inputMode="decimal"
+                $invalid={Boolean(fieldErrors.compare_at_major)}
+                aria-invalid={Boolean(fieldErrors.compare_at_major)}
                 value={compareMajor}
-                onChange={(e) => setCompareMajor(e.target.value)}
+                onChange={(e) => {
+                  setCompareMajor(e.target.value);
+                  clearFieldError("compare_at_major");
+                }}
               />
+              {fieldErrors.compare_at_major ? <FieldError>{fieldErrors.compare_at_major}</FieldError> : null}
               {discount != null ? (
                 <Hint style={{ marginTop: 6, marginBottom: 0 }}>
                   {dict.admin.discountPreview}: −{discount}%
@@ -739,7 +944,7 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
                 </div>
               </div>
             </FileUploader>
-            <Input ref={imageInputRef} id="image_file" name="image_file" type="file" accept="image/*" style={{ display: "none" }} />
+            <Input ref={imageInputRef} id="image_file" type="file" accept="image/*" style={{ display: "none" }} />
           </Field>
           {imagePreview ? (
             <div style={{ marginBottom: 16 }}>
@@ -769,7 +974,6 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
             <Input
               ref={galleryInputRef}
               id="gallery_files"
-              name="gallery_files"
               type="file"
               accept="image/*"
               multiple
@@ -787,7 +991,6 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
             <Input
               ref={galleryVideosRef}
               id="gallery_videos"
-              name="gallery_videos"
               type="file"
               accept="video/mp4,video/webm,video/quicktime"
               multiple
@@ -864,7 +1067,7 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
                 </div>
               </div>
             </FileUploader>
-            <Input ref={videoInputRef} id="video_file" name="video_file" type="file" accept="video/*" style={{ display: "none" }} />
+            <Input ref={videoInputRef} id="video_file" type="file" accept="video/*" style={{ display: "none" }} />
           </Field>
           {videoPreview ? (
             <div style={{ marginBottom: 16, maxWidth: 320 }}>
@@ -915,15 +1118,21 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
 
         <Actions>
           <AdminButton type="submit" name="intent" value="publish" disabled={pending}>
-            {pending ? dict.admin.saving : dict.admin.publish}
+            {pending && submitIntent === "publish"
+              ? phaseLabel ?? dict.admin.saving
+              : dict.admin.publish}
           </AdminButton>
           <AdminButton type="submit" name="intent" value="draft" $variant="ghost" disabled={pending}>
-            {pending ? dict.admin.saving : dict.admin.saveDraft}
+            {pending && submitIntent === "draft"
+              ? phaseLabel ?? dict.admin.saving
+              : dict.admin.saveDraft}
           </AdminButton>
         </Actions>
+        </FormBody>
       </form>
+      </FormColumn>
 
-      <div style={{ position: "sticky", top: "calc(var(--header-h) + 16px)" }}>
+      <PreviewColumn>
         <ProductPreview
           locale={locale}
           mode={previewMode}
@@ -937,7 +1146,7 @@ export function ProductForm({ mode, locale, dict, product, knownTags = [], known
           }}
           draft={previewDraft}
         />
-      </div>
+      </PreviewColumn>
     </Layout>
   );
 }

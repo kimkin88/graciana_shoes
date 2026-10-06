@@ -21,12 +21,15 @@ import { Trash2 } from "lucide-react";
 
 export default async function AdminProductsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ saved?: string }>;
 }) {
   const { locale: raw } = await params;
   if (!isLocale(raw)) notFound();
   const locale = raw as Locale;
+  const sp = await searchParams;
   const dict = await getDictionary(locale);
   const supabase = await createClient();
 
@@ -37,6 +40,12 @@ export default async function AdminProductsPage({
 
   if (error) console.error(error);
   const products = (data ?? []) as ProductRow[];
+  const savedText =
+    sp.saved === "draft"
+      ? dict.admin.productDraftSaved
+      : sp.saved === "1"
+        ? dict.admin.productSaved
+        : null;
 
   return (
     <div style={{ display: "grid", gap: 18 }}>
@@ -46,6 +55,20 @@ export default async function AdminProductsPage({
           {dict.admin.addProduct}
         </AdminButtonLink>
       </AdminSectionHead>
+      {savedText ? (
+        <p
+          role="status"
+          style={{
+            margin: 0,
+            padding: "12px 14px",
+            border: "1px solid #bbf7d0",
+            background: "#f0fdf4",
+            color: "#166534",
+          }}
+        >
+          {savedText}
+        </p>
+      ) : null}
       <AdminTableWrap>
         <TableScroll>
           <AdminTable>
